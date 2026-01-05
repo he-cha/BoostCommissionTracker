@@ -1,0 +1,255 @@
+import { useState, useMemo, useCallback } from 'react';
+import { Header } from '../components/layout/Header';
+import { MetricsCard } from '../components/features/MetricsCard';
+import { IMEISummaryTable } from '../components/features/IMEISummaryTable';
+import { AlertsPanel } from '../components/features/AlertsPanel';
+import { CSVUpload } from '../components/features/CSVUpload';
+import { FileManagement } from '../components/features/FileManagement';
+import { FilterBar } from '../components/features/FilterBar';
+import { AlertsPage } from './AlertsPage';
+import { IMEIDetailPage } from './IMEIDetailPage';
+import { EditPaymentPage } from './EditPaymentPage';
+import { useCommissionStore } from '../stores/commissionStore';
+import { DollarSign, TrendingDown, TrendingUp, Smartphone, AlertTriangle, FileWarning } from 'lucide-react';
+import { formatCurrency } from '../lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Input } from '../components/ui/input';
+
+type View = 'dashboard' | 'alerts' | 'imei-detail' | 'edit-payment';
+
+export function DashboardPage() {
+  const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [selectedIMEI, setSelectedIMEI] = useState<string>('');
+  const [selectedRecordId, setSelectedRecordId] = useState<string>('');
+  const [filters, setFilters] = useState<any>({});
+  const [dashboardStartDate, setDashboardStartDate] = useState<string>('');
+  const [dashboardEndDate, setDashboardEndDate] = useState<string>('');
+  const [dashboardStore, setDashboardStore] = useState<string>(' ');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
+  
+  const { records, getMetrics, getIMEISummaries, getAlerts } = useCommissionStore();
+  
+  // Memoize stores to avoid recalculation
+  const stores = useMemo(
+    () => Array.from(new Set(records.map(r => r.store).filter(Boolean))),
+    [records]
+  );
+  
+  // Memoize metrics filters
+  const metricsFilters = useMemo(() => {
+    const filters: any = {};
+    if (dashboardStartDate && dashboardEndDate) filters.dateRange = [dashboardStartDate, dashboardEndDate];
+    if (dashboardStore && dashboardStore.trim()) filters.store = dashboardStore;
+    if (categoryFilter) filters.category = categoryFilter;
+    return filters;
+  }, [dashboardStartDate, dashboardEndDate, dashboardStore, categoryFilter]);
+  
+  // Memoize metrics calculation
+  const metrics = useMemo(() => getMetrics(metricsFilters), [metricsFilters, records]);
+  
+  // Memoize summary filters
+  const summaryFilters = useMemo(() => {
+    const sf: any = { ...filters };
+    if (categoryFilter) sf.category = categoryFilter;
+    return sf;
+  }, [filters, categoryFilter]);
+  
+  // Memoize summaries calculation
+  const allSummaries = useMemo(() => getIMEISummaries(summaryFilters), [summaryFilters, records]);
+  
+  // Paginate summaries
+  const paginatedSummaries = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return allSummaries.slice(startIndex, endIndex);
+  }, [allSummaries, currentPage]);
+  
+  const totalPages = Math.ceil(allSummaries.length / ITEMS_PER_PAGE);
+  
+  // Memoize alerts
+  const alerts = useMemo(() => getAlerts(), [records]);
+  
+  // Reset to page 1 when filters change
+  const handleFilterChange = useCallback((newFilters: any) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+  }, []);
+
+  if (currentView === 'alerts') {
+    return <AlertsPage onBack={() => setCurrentView('dashboard')} />;
+  }
+
+  if (currentView === 'imei-detail') {
+    return (
+      <IMEIDetailPage
+        imei={selectedIMEI}
+        onBack={() => setCurrentView('dashboard')}
+        onEdit={(recordId) => {
+          setSelectedRecordId(recordId);
+          setCurrentView('edit-payment');
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'edit-payment') {
+    return (
+      <EditPaymentPage
+        recordId={selectedRecordId}
+        onBack={() => setCurrentView('imei-detail')}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-3xl font-bold text-foreground mb-2">Commission Dashboard</h2>
+              <p className="text-muted-foreground">{metrics.currentPeriod}</p>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-48">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Start Date
+                </label>
+                <Input
+                  type="date"
+                  value={dashboardStartDate}
+                  onChange={(e) => setDashboardStartDate(e.target.value)}
+                  placeholder="Start date"
+                />
+              </div>
+              <div className="w-48">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  End Date
+                </label>
+                <Input
+                  type="date"
+                  value={dashboardEndDate}
+                  onChange={(e) => setDashboardEndDate(e.target.value)}
+                  placeholder="End date"
+                />
+              </div>
+              <div className="w-48">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Store
+                </label>
+                <Select value={dashboardStore} onValueChange={setDashboardStore}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Stores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=" ">All Stores</SelectItem>
+                    {stores.map(s => (
+                      <SelectItem key={s} value={s!}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <MetricsCard
+            title="Total Earned"
+            value={formatCurrency(metrics.totalEarned)}
+            icon={TrendingUp}
+            trend="positive"
+            subtitle={metrics.currentPeriod}
+            clickable
+            onClick={() => setCategoryFilter(categoryFilter === 'earned' ? '' : 'earned')}
+          />
+          <MetricsCard
+            title="Total Withheld"
+            value={formatCurrency(metrics.totalWithheld)}
+            icon={TrendingDown}
+            trend="negative"
+            badge={metrics.negativeCount}
+            clickable
+            onClick={() => setCategoryFilter(categoryFilter === 'withheld' ? '' : 'withheld')}
+          />
+          <MetricsCard
+            title="Net Commission"
+            value={formatCurrency(metrics.netCommission)}
+            icon={DollarSign}
+            trend={metrics.netCommission >= 0 ? 'positive' : 'negative'}
+          />
+          <MetricsCard
+            title="Overdue Payments"
+            value={metrics.overduePayments.toString()}
+            icon={AlertTriangle}
+            trend={metrics.overduePayments > 0 ? 'negative' : 'neutral'}
+            badge={metrics.overduePayments}
+            clickable
+            onClick={() => setCategoryFilter(categoryFilter === 'overdue' ? '' : 'overdue')}
+          />
+        </div>
+
+        <Tabs defaultValue="summary" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="summary">IMEI Summary</TabsTrigger>
+            <TabsTrigger value="alerts" className="gap-2">
+              Alerts
+              {alerts.length > 0 && (
+                <span className="bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                  {alerts.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="upload">Upload CSV</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="summary" className="space-y-6">
+            <FilterBar onFilterChange={handleFilterChange} />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Activation Timeline Tracker</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Track commission payments across 6-month activation lifecycles
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <IMEISummaryTable
+                  summaries={paginatedSummaries}
+                  totalRecords={allSummaries.length}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  onIMEIClick={(imei) => {
+                    setSelectedIMEI(imei);
+                    setCurrentView('imei-detail');
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="alerts" className="space-y-6">
+            <AlertsPanel
+              alerts={alerts}
+              onAlertClick={(imei) => {
+                setSelectedIMEI(imei);
+                setCurrentView('imei-detail');
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="upload" className="space-y-6">
+            <FileManagement />
+            <CSVUpload />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}
