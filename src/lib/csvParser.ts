@@ -1,3 +1,13 @@
+// Helper to convert MM-DD-YYYY to YYYY-MM-DD (ISO)
+function toISODate(dateStr: string): string {
+  if (!dateStr) return '';
+  const [month, day, year] = dateStr.split('-').map(s => s.trim());
+  if (!month || !day || !year) return '';
+  // Pad month and day if needed
+  const mm = month.padStart(2, '0');
+  const dd = day.padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
 
 import { CommissionRecord } from '../types';
 import { parseCSVLine, cleanIMEI, extractMonthNumber } from './utils';
@@ -39,28 +49,34 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
   // Process records in batches for better performance
   for (let i = 1; i < lines.length; i++) {
     const columns = parseCSVLine(lines[i]);
-    
+
     // Skip incomplete rows
     if (columns.length < headers.length - 5) continue;
-    
+
     const imei = cleanIMEI(columns[columnIndices.imei] || '');
     const amountStr = columns[columnIndices.amount] || '0';
-    
+
     // Skip rows without IMEI or amount
     if (!imei || imei === 'Unknown' || !amountStr) continue;
-    
+
     const paymentDescription = columns[columnIndices.paymentDesc] || '';
     const monthNumber = extractMonthNumber(paymentDescription);
     const amountValue = parseFloat(amountStr.replace(/[^0-9.-]/g, '')) || 0;
-    
+
     // Skip zero amounts to reduce noise
     if (amountValue === 0) continue;
-    
+
+    // Convert dates to ISO format
+    const paymentDateRaw = columns[columnIndices.paymentDate] || '';
+    const activationDateRaw = columns[columnIndices.activationDate] || '';
+    const paymentDate = toISODate(paymentDateRaw);
+    const activationDate = toISODate(activationDateRaw);
+
     const record: CommissionRecord = {
       id: `${imei}-${i}-${timestamp}`,
       imei,
-      paymentDate: columns[columnIndices.paymentDate] || '',
-      activationDate: columns[columnIndices.activationDate] || '',
+      paymentDate,
+      activationDate,
       paymentType: columns[columnIndices.paymentType] || 'Commission',
       amount: amountValue,
       paymentDescription,
@@ -74,7 +90,7 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
       isActive: true,
       fileId,
     };
-    
+
     records.push(record);
   }
   
