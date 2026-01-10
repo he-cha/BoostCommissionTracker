@@ -469,7 +469,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
 }), {
   name: 'commission-storage',
   partialize: (state) => ({
-    records: state.records,
+    // Only persist metadata, not full records
     uploadedFiles: state.uploadedFiles,
     imeiNotes: Array.from(state.imeiNotes.entries()),
   }),
