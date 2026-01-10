@@ -17,7 +17,9 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString('en-US', {
+  const d = new Date(date);
+  if (!date || isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -45,8 +47,9 @@ export function getPaymentTypeBadgeColor(type: string): string {
 
 export function calculateExpectedPaymentDate(activationDate: string, monthNumber: number): string {
   const activation = new Date(activationDate);
+  if (!activationDate || isNaN(activation.getTime())) return '';
   let expectedDate = new Date(activation);
-  
+
   if (monthNumber === 1) {
     // Month 1: within 15 days
     expectedDate.setDate(expectedDate.getDate() + 15);
@@ -55,8 +58,8 @@ export function calculateExpectedPaymentDate(activationDate: string, monthNumber
     const daysToAdd = 15 + (monthNumber - 1) * 40;
     expectedDate.setDate(expectedDate.getDate() + daysToAdd);
   }
-  
-  return expectedDate.toISOString().split('T')[0];
+
+  return !isNaN(expectedDate.getTime()) ? expectedDate.toISOString().split('T')[0] : '';
 }
 
 export function getPaymentStatus(
