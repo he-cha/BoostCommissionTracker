@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useCommissionStore } from '../../stores/commissionStore';
+import { useEffect } from 'react';
 import { parseBoostCSV } from '../../lib/csvParser';
 
 export function CSVUpload() {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const addRecords = useCommissionStore((state) => state.addRecords);
+  const setRecords = useCommissionStore((state) => state.setRecords || (() => {}));
 
   const handleFile = async (file: File) => {
     if (!file.name.endsWith('.csv')) {
@@ -38,7 +39,25 @@ export function CSVUpload() {
         return;
       }
 
-      addRecords(records, { filename: file.name, fileId });
+      // Send records to backend
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/upload`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to upload records to backend');
+      }
+
+      // Fetch all records from backend after upload
+      const fetchUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
+      const fetchRes = await fetch(fetchUrl);
+      if (!fetchRes.ok) {
+        throw new Error('Failed to fetch records from backend');
+      }
+      const allRecords = await fetchRes.json();
+      setRecords(allRecords);
 
       toast({
         title: 'CSV uploaded successfully',

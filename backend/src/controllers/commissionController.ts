@@ -1,3 +1,17 @@
+// Bulk upload commissions
+export const uploadCommissions = async (req: Request, res: Response) => {
+  try {
+    const { records } = req.body;
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'No records provided' });
+    }
+    // Insert many records at once
+    const inserted = await CommissionRecord.insertMany(records, { ordered: false });
+    res.status(201).json(inserted);
+  } catch (error) {
+    res.status(400).json({ error: 'Failed to upload commission records', details: error });
+  }
+};
 import { Request, Response } from 'express';
 import CommissionRecord from '../models/CommissionRecord';
 

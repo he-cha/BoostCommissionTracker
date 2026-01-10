@@ -26,6 +26,7 @@ interface CommissionState {
 
 export const useCommissionStore = create<CommissionState>()(persist((set, get) => ({
   records: [],
+  setRecords: (records: CommissionRecord[]) => set({ records }),
   uploadedFiles: [],
   imeiNotes: new Map(),
   
