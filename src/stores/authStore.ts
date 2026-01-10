@@ -1,32 +1,43 @@
 import { create } from 'zustand';
 import { User } from '../types';
 
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  token: string | null;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
+
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
-  login: async (email: string, password: string) => {
-    // Mock authentication - V1.0
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    
-    if (email === 'manager@boost.com' && password === 'demo123') {
-      const user: User = {
-        id: '1',
-        email: email,
-        role: 'manager',
-      };
-      set({ user, isAuthenticated: true });
-    } else {
+  token: null,
+  login: async (username: string, password: string) => {
+    try {
+      const response = await fetch('http://localhost:5001/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!response.ok) {
+        throw new Error('Invalid credentials');
+      }
+      const data = await response.json();
+      set({
+        user: { id: '', email: username, role: 'manager' }, // You can update this to match your backend response
+        isAuthenticated: true,
+        token: data.token,
+      });
+      localStorage.setItem('token', data.token);
+    } catch (error) {
       throw new Error('Invalid credentials');
     }
   },
   logout: () => {
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false, token: null });
+    localStorage.removeItem('token');
   },
 }));
