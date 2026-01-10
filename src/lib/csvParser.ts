@@ -10,7 +10,14 @@ function toISODate(dateStr: string): string {
 }
 
 import { CommissionRecord } from '../types';
-import { parseCSVLine, cleanIMEI, extractMonthNumber } from './utils';
+import { parseCSVLine, cleanIMEI } from './utils';
+
+// Enhanced month extraction: looks for 'Month X' or 'MonthX' (with or without space)
+function extractMonthNumberFlexible(desc: string): number | null {
+  if (!desc) return null;
+  const match = desc.match(/Month\s*(\d+)/i);
+  return match ? parseInt(match[1]) : null;
+}
 
 
 export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRecord[] {
@@ -67,8 +74,20 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
     if (amountValue === 0) continue;
 
     // Payment Description
+
     const paymentDescription = col.paymentDesc >= 0 ? columns[col.paymentDesc] || '' : '';
-    const monthNumber = extractMonthNumber(paymentDescription);
+    let monthNumber = extractMonthNumberFlexible(paymentDescription);
+
+    // Only auto-calculate if not found in description
+    if (!monthNumber && activationDate && paymentDate) {
+      const act = new Date(activationDate);
+      const pay = new Date(paymentDate);
+      if (!isNaN(act.getTime()) && !isNaN(pay.getTime())) {
+        const diffDays = Math.floor((pay.getTime() - act.getTime()) / (1000 * 60 * 60 * 24));
+        monthNumber = Math.floor(diffDays / 35) + 1;
+        if (monthNumber < 1 || monthNumber > 6) monthNumber = null;
+      }
+    }
 
     // Dates
     const paymentDateRaw = col.paymentDate >= 0 ? columns[col.paymentDate] || '' : '';
@@ -76,15 +95,17 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
     // Accept both MM/DD/YYYY and MM-DD-YYYY
     function parseDateFlexible(dateStr: string): string {
       if (!dateStr) return '';
-      // Try MM/DD/YYYY first
+      // Try MM/DD/YYYY or MM-DD-YYYY
       const mdy = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
       if (mdy) {
         const [ , mm, dd, yyyy ] = mdy;
-        return `${yyyy.length === 2 ? '20'+yyyy : yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+        // Always return full ISO string
+        const iso = new Date(`${yyyy.length === 2 ? '20'+yyyy : yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}T00:00:00`).toISOString();
+        return iso;
       }
       // Fallback to ISO
       const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+      if (!isNaN(d.getTime())) return d.toISOString();
       return '';
     }
     const paymentDate = parseDateFlexible(paymentDateRaw);
