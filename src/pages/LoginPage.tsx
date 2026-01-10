@@ -8,7 +8,7 @@ import { useToast } from '../hooks/use-toast';
 import { BarChart3, Lock, Mail } from 'lucide-react';
 
 export function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuthStore();
@@ -19,7 +19,7 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await login(username, password);
       toast({
         title: 'Login successful',
         description: 'Welcome back to Commission Tracker',
@@ -28,7 +28,7 @@ export function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Login failed',
-        description: 'Invalid email or password',
+        description: 'Invalid username or password',
       });
     } finally {
       setIsLoading(false);
@@ -54,15 +54,15 @@ export function LoginPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="username">Username</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="manager@boost.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="username"
+                    type="text"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     className="pl-9"
                     required
                   />
@@ -90,11 +90,7 @@ export function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
-              <p className="text-xs font-semibold text-foreground mb-2">Demo Credentials:</p>
-              <p className="text-xs text-muted-foreground font-mono">Email: manager@boost.com</p>
-              <p className="text-xs text-muted-foreground font-mono">Password: demo123</p>
-            </div>
+            {/* Demo credentials removed for production */}
           </CardContent>
         </Card>
       </div>
