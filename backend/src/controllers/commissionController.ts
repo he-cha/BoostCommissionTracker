@@ -2,14 +2,20 @@
 export const uploadCommissions = async (req: Request, res: Response) => {
   try {
     const { records } = req.body;
+    console.log('Received records for upload:', Array.isArray(records) ? records.length : records);
     if (!Array.isArray(records) || records.length === 0) {
+      console.error('No records provided');
       return res.status(400).json({ error: 'No records provided' });
     }
+    // Log a sample record for debugging
+    console.log('Sample record:', records[0]);
     // Insert many records at once
     const inserted = await CommissionRecord.insertMany(records, { ordered: false });
+    console.log('Inserted records:', inserted.length);
     res.status(201).json(inserted);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to upload commission records', details: error });
+  } catch (error: any) {
+    console.error('Bulk upload error:', error);
+    res.status(400).json({ error: 'Failed to upload commission records', details: error?.message || error });
   }
 };
 import { Request, Response } from 'express';
