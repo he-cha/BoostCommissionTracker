@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Header } from '../components/layout/Header';
 import { MetricsCard } from '../components/features/MetricsCard';
 import { IMEISummaryTable } from '../components/features/IMEISummaryTable';
@@ -31,7 +31,26 @@ export function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 25;
   
-  const { records, getMetrics, getIMEISummaries, getAlerts } = useCommissionStore();
+  const { records, getMetrics, getIMEISummaries, getAlerts, setRecords } = useCommissionStore();
+  
+  // Fetch all commission records from backend on mount
+  useEffect(() => {
+    const fetchRecords = async () => {
+      try {
+        const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error('Failed to fetch commission records');
+        const data = await response.json();
+        setRecords(data);
+      } catch (err) {
+        // Optionally log or show error
+        console.error('Error loading commission records:', err);
+      }
+    };
+    fetchRecords();
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   // Memoize stores to avoid recalculation
   const stores = useMemo(
