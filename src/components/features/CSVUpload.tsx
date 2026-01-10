@@ -39,6 +39,9 @@ export function CSVUpload() {
         return;
       }
 
+      // Log first parsed record for debugging
+      console.log('First parsed record:', records[0]);
+
       // Send records to backend
       const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/upload`;
       const response = await fetch(apiUrl, {
