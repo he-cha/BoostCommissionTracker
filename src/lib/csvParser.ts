@@ -95,9 +95,25 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
 
     // IMEI: clean and fallback to Sale IMEI if needed
     let imei = col.imei >= 0 ? cleanIMEI(columns[col.imei] || '') : '';
+    // If IMEI is missing or 'Unknown', try Sale IMEI
     if ((!imei || imei === 'Unknown') && headers.includes('Sale IMEI')) {
       const saleImeiIdx = getCol('Sale IMEI');
       imei = saleImeiIdx >= 0 ? cleanIMEI(columns[saleImeiIdx] || '') : '';
+    }
+    // If still missing, try to extract IMEI from paymentDescription
+    if ((!imei || imei === 'Unknown') && col.paymentDesc >= 0) {
+      const paymentDescription = columns[col.paymentDesc] || '';
+      // Look for IMEI as a 15-digit number in the description
+      const imeiMatch = paymentDescription.match(/IMEI\s*(\d{15})/i);
+      if (imeiMatch) {
+        imei = imeiMatch[1];
+      } else {
+        // Fallback: look for any 15-digit number
+        const genericMatch = paymentDescription.match(/(\d{15})/);
+        if (genericMatch) {
+          imei = genericMatch[1];
+        }
+      }
     }
     if (!imei || imei === 'Unknown') continue;
 
