@@ -35,6 +35,22 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
         idx = headers.findIndex(h => h.trim().toLowerCase() === alt.toLowerCase());
         if (idx !== -1) break;
       }
+    // Accept both MM/DD/YYYY and MM-DD-YYYY
+    function parseDateFlexible(dateStr: string): string {
+      if (!dateStr) return '';
+      // Try MM/DD/YYYY or MM-DD-YYYY
+      const mdy = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+      if (mdy) {
+        const [ , mm, dd, yyyy ] = mdy;
+        // Always return full ISO string
+        const iso = new Date(`${yyyy.length === 2 ? '20'+yyyy : yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}T00:00:00`).toISOString();
+        return iso;
+      }
+      // Fallback to ISO
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d.toISOString();
+      return '';
+    }
     }
     return idx;
   };
@@ -55,6 +71,23 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
   const records: CommissionRecord[] = [];
   const timestamp = Date.now();
 
+  // Accept both MM/DD/YYYY and MM-DD-YYYY
+  const parseDateFlexible = (dateStr: string): string => {
+    if (!dateStr) return '';
+    // Try MM/DD/YYYY or MM-DD-YYYY
+    const mdy = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (mdy) {
+      const [ , mm, dd, yyyy ] = mdy;
+      // Always return full ISO string
+      const iso = new Date(`${yyyy.length === 2 ? '20'+yyyy : yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}T00:00:00`).toISOString();
+      return iso;
+    }
+    // Fallback to ISO
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d.toISOString();
+    return '';
+  };
+
   for (let i = 1; i < lines.length; i++) {
     const columns = parseCSVLine(lines[i]);
     // Skip incomplete rows
@@ -74,10 +107,15 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
     if (amountValue === 0) continue;
 
     // Payment Description
-
     const paymentDescription = col.paymentDesc >= 0 ? columns[col.paymentDesc] || '' : '';
-    let monthNumber = extractMonthNumberFlexible(paymentDescription);
 
+    // Dates (must be parsed before monthNumber logic)
+    const paymentDateRaw = col.paymentDate >= 0 ? columns[col.paymentDate] || '' : '';
+    const activationDateRaw = col.activationDate >= 0 ? columns[col.activationDate] || '' : '';
+    const paymentDate = parseDateFlexible(paymentDateRaw);
+    const activationDate = parseDateFlexible(activationDateRaw);
+
+    let monthNumber = extractMonthNumberFlexible(paymentDescription);
     // Only auto-calculate if not found in description
     if (!monthNumber && activationDate && paymentDate) {
       const act = new Date(activationDate);
@@ -88,28 +126,6 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
         if (monthNumber < 1 || monthNumber > 6) monthNumber = null;
       }
     }
-
-    // Dates
-    const paymentDateRaw = col.paymentDate >= 0 ? columns[col.paymentDate] || '' : '';
-    const activationDateRaw = col.activationDate >= 0 ? columns[col.activationDate] || '' : '';
-    // Accept both MM/DD/YYYY and MM-DD-YYYY
-    function parseDateFlexible(dateStr: string): string {
-      if (!dateStr) return '';
-      // Try MM/DD/YYYY or MM-DD-YYYY
-      const mdy = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-      if (mdy) {
-        const [ , mm, dd, yyyy ] = mdy;
-        // Always return full ISO string
-        const iso = new Date(`${yyyy.length === 2 ? '20'+yyyy : yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}T00:00:00`).toISOString();
-        return iso;
-      }
-      // Fallback to ISO
-      const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) return d.toISOString();
-      return '';
-    }
-    const paymentDate = parseDateFlexible(paymentDateRaw);
-    const activationDate = parseDateFlexible(activationDateRaw);
 
     // Sale Type
     const saleType = col.saleType >= 0 ? columns[col.saleType] : (headers.includes('Sale Type') ? columns[getCol('Sale Type')] : 'Unknown');
