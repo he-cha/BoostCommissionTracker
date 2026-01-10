@@ -52,11 +52,10 @@ export function calculateExpectedPaymentDate(activationDate: string, monthNumber
 
   if (monthNumber === 1) {
     // Month 1: within 15 days
-    expectedDate.setDate(expectedDate.getDate() + 15);
+     expectedDate.setDate(expectedDate.getDate() + 8);
   } else {
     // Month 2-6: +40 days from previous month
-    const daysToAdd = 15 + (monthNumber - 1) * 40;
-    expectedDate.setDate(expectedDate.getDate() + daysToAdd);
+     expectedDate.setDate(expectedDate.getDate() + (monthNumber - 1) * 40);
   }
 
   return !isNaN(expectedDate.getTime()) ? expectedDate.toISOString().split('T')[0] : '';

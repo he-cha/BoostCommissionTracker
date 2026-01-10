@@ -22,27 +22,7 @@ export function FileManagement() {
     }
   };
 
-  if (uploadedFiles.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Uploaded Files
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Manage your uploaded CSV files
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">No files uploaded yet</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // FileManagement card removed as requested
 
   return (
     <Card>
