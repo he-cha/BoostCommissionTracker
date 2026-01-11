@@ -5,6 +5,7 @@ import { calculateExpectedPaymentDate, getPaymentStatus } from '../lib/utils';
 
 interface CommissionState {
   records: CommissionRecord[];
+  setRecords: (records: CommissionRecord[]) => void;
   uploadedFiles: FileUpload[];
   imeiNotes: Map<string, IMEINotes>;
   addRecords: (records: CommissionRecord[], fileMetadata?: { filename: string; fileId: string }) => void;
