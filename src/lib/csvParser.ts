@@ -19,6 +19,23 @@ function extractMonthNumberFlexible(desc: string): number | null {
   return match ? parseInt(match[1]) : null;
 }
 
+// Extract all month numbers from a string (e.g., 'Month 1, 2, 3')
+function extractAllMonthNumbers(desc: string): number[] {
+  if (!desc) return [];
+  // Match 'Month 1', 'Month 2', 'Month 3', etc. and also 'Month 1, 2, 3'
+  const matches = desc.match(/Month\s*((\d+[ ,]*)+)/gi);
+  if (!matches) return [];
+  // Flatten all found month groups
+  const monthNums: number[] = [];
+  matches.forEach(group => {
+    // Extract all numbers from the group
+    const nums = group.match(/\d+/g);
+    if (nums) monthNums.push(...nums.map(n => parseInt(n)));
+  });
+  // Remove duplicates and invalid months
+  return Array.from(new Set(monthNums.filter(m => m >= 1 && m <= 6)));
+}
+
 
 export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRecord[] {
   const lines = csvContent.split('\n').filter(line => line.trim());
@@ -131,15 +148,20 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
     const paymentDate = parseDateFlexible(paymentDateRaw);
     const activationDate = parseDateFlexible(activationDateRaw);
 
-    let monthNumber = extractMonthNumberFlexible(paymentDescription);
-    // Only auto-calculate if not found in description
-    if (!monthNumber && activationDate && paymentDate) {
+    // Extract all month numbers from paymentType and paymentDescription
+    const paymentTypeStr = col.paymentType >= 0 ? columns[col.paymentType] : '';
+    const monthsFromType = extractAllMonthNumbers(paymentTypeStr);
+    const monthsFromDesc = extractAllMonthNumbers(paymentDescription);
+    let allMonths = Array.from(new Set([...monthsFromType, ...monthsFromDesc]));
+
+    // If no explicit months, fallback to auto-calc
+    if (allMonths.length === 0 && activationDate && paymentDate) {
       const act = new Date(activationDate);
       const pay = new Date(paymentDate);
       if (!isNaN(act.getTime()) && !isNaN(pay.getTime())) {
         const diffDays = Math.floor((pay.getTime() - act.getTime()) / (1000 * 60 * 60 * 24));
-        monthNumber = Math.floor(diffDays / 35) + 1;
-        if (monthNumber < 1 || monthNumber > 6) monthNumber = null;
+        const autoMonth = Math.floor(diffDays / 35) + 1;
+        if (autoMonth >= 1 && autoMonth <= 6) allMonths = [autoMonth];
       }
     }
 
@@ -158,24 +180,46 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
     // Payment Type
     const paymentType = col.paymentType >= 0 ? columns[col.paymentType] : 'Commission';
 
-    // Build record
-    const record: CommissionRecord = {
-      id: `${imei}-${i}-${timestamp}`,
-      imei,
-      paymentDate,
-      activationDate,
-      paymentType,
-      amount: amountValue,
-      paymentDescription,
-      adjustmentReason,
-      monthNumber,
-      saleType: saleType || 'Unknown',
-      repUsername,
-      store,
-      isActive: true,
-      fileId,
-    };
-    records.push(record);
+    // For each month, create a record
+    for (const monthNumber of allMonths) {
+      const record: CommissionRecord = {
+        id: `${imei}-${i}-${timestamp}-m${monthNumber}`,
+        imei,
+        paymentDate,
+        activationDate,
+        paymentType,
+        amount: amountValue,
+        paymentDescription,
+        adjustmentReason,
+        monthNumber,
+        saleType: saleType || 'Unknown',
+        repUsername,
+        store,
+        isActive: true,
+        fileId,
+      };
+      records.push(record);
+    }
+    // If no month found, create a record with null monthNumber (legacy fallback)
+    if (allMonths.length === 0) {
+      const record: CommissionRecord = {
+        id: `${imei}-${i}-${timestamp}-m0`,
+        imei,
+        paymentDate,
+        activationDate,
+        paymentType,
+        amount: amountValue,
+        paymentDescription,
+        adjustmentReason,
+        monthNumber: null,
+        saleType: saleType || 'Unknown',
+        repUsername,
+        store,
+        isActive: true,
+        fileId,
+      };
+      records.push(record);
+    }
   }
   if (records.length > 0) {
     console.log('First parsed record:', records[0]);

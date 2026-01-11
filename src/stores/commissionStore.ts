@@ -208,14 +208,30 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     allIMEIs.forEach(imei => {
       const imeiRecords = allRecords.filter(r => r.imei === imei);
       const activationRecord = imeiRecords.find(r => r.activationDate) || imeiRecords[0];
-      
       if (activationRecord) {
         for (let month = 1; month <= 6; month++) {
           const expectedDate = calculateExpectedPaymentDate(activationRecord.activationDate, month);
           const monthPayment = imeiRecords.find(r => r.monthNumber === month && r.amount > 0);
-          
-          if (!monthPayment && getPaymentStatus(expectedDate) === 'overdue') {
-            overdueCount++;
+          if (!monthPayment) {
+            // Calculate days overdue
+            const today = new Date();
+            const expected = new Date(expectedDate);
+            if (today > expected) {
+              const daysOverdue = Math.floor((today.getTime() - expected.getTime()) / (1000 * 60 * 60 * 24));
+              // Optionally, you can push an alert here for each overdue month
+              overdueCount++;
+              // Example: add to alerts array if you want per-month alert
+              // alerts.push({
+              //   id: `${imei}-overdue-${month}`,
+              //   imei,
+              //   type: 'overdue',
+              //   severity: daysOverdue > 30 ? 'high' : 'medium',
+              //   message: `Month ${month} payment overdue by ${daysOverdue} days`,
+              //   expectedMonth: month,
+              //   expectedDate,
+              //   activationDate: activationRecord.activationDate,
+              // });
+            }
           }
         }
       }
