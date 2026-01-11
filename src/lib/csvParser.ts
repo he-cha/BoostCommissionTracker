@@ -22,8 +22,8 @@ function extractMonthNumberFlexible(desc: string): number | null {
 // Extract all month numbers from a string (e.g., 'Month 1, 2, 3')
 function extractAllMonthNumbers(desc: string): number[] {
   if (!desc) return [];
-  // Match all occurrences of 'Month X' (X = 1-6)
-  const regex = /Month\s*(\d{1,2})/gi;
+  // Match all occurrences of 'Month X', 'MonthX', 'month 2', etc. (case-insensitive, optional space)
+  const regex = /month\s*(\d{1,2})/gi;
   const monthNums: number[] = [];
   let match;
   while ((match = regex.exec(desc)) !== null) {
@@ -146,13 +146,14 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
     const paymentDate = parseDateFlexible(paymentDateRaw);
     const activationDate = parseDateFlexible(activationDateRaw);
 
-    // Extract all month numbers from paymentType and paymentDescription
+    // Extract month numbers: prioritize Payment Type, fallback to Payment Description
     const paymentTypeStr = col.paymentType >= 0 ? columns[col.paymentType] : '';
-    const monthsFromType = extractAllMonthNumbers(paymentTypeStr);
-    const monthsFromDesc = extractAllMonthNumbers(paymentDescription);
-    let allMonths = Array.from(new Set([...monthsFromType, ...monthsFromDesc]));
+    let allMonths = extractAllMonthNumbers(paymentTypeStr);
+    if (allMonths.length === 0) {
+      allMonths = extractAllMonthNumbers(paymentDescription);
+    }
 
-    // If no explicit months, fallback to auto-calc
+    // If no explicit months, fallback to auto-calc using payment date and activation date
     if (allMonths.length === 0 && activationDate && paymentDate) {
       const act = new Date(activationDate);
       const pay = new Date(paymentDate);
@@ -196,6 +197,8 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
         isActive: true,
         fileId,
       };
+      // Debug log for month assignment
+      console.log(`[CSVParser] Parsed record for IMEI ${imei}: paymentType='${paymentTypeStr}', paymentDescription='${paymentDescription}', monthNumber=${monthNumber}`);
       records.push(record);
     }
     // If no month found, create a record with null monthNumber (legacy fallback)
