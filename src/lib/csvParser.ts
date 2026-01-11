@@ -22,18 +22,16 @@ function extractMonthNumberFlexible(desc: string): number | null {
 // Extract all month numbers from a string (e.g., 'Month 1, 2, 3')
 function extractAllMonthNumbers(desc: string): number[] {
   if (!desc) return [];
-  // Match 'Month 1', 'Month 2', 'Month 3', etc. and also 'Month 1, 2, 3'
-  const matches = desc.match(/Month\s*((\d+[ ,]*)+)/gi);
-  if (!matches) return [];
-  // Flatten all found month groups
+  // Match all occurrences of 'Month X' (X = 1-6)
+  const regex = /Month\s*(\d{1,2})/gi;
   const monthNums: number[] = [];
-  matches.forEach(group => {
-    // Extract all numbers from the group
-    const nums = group.match(/\d+/g);
-    if (nums) monthNums.push(...nums.map(n => parseInt(n)));
-  });
-  // Remove duplicates and invalid months
-  return Array.from(new Set(monthNums.filter(m => m >= 1 && m <= 6)));
+  let match;
+  while ((match = regex.exec(desc)) !== null) {
+    const num = parseInt(match[1]);
+    if (num >= 1 && num <= 6) monthNums.push(num);
+  }
+  // Remove duplicates
+  return Array.from(new Set(monthNums));
 }
 
 
