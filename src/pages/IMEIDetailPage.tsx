@@ -20,6 +20,7 @@ interface IMEIDetailPageProps {
 }
 
 export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   const { toast } = useToast();
   const getRecordsByIMEI = useCommissionStore((state) => state.getRecordsByIMEI);
   const updateIMEINotes = useCommissionStore((state) => state.updateIMEINotes);
@@ -59,27 +60,7 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
     }
   };
 
-  if (records.length === 0) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Button variant="ghost" onClick={onBack} className="gap-2 mb-4">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <p className="text-muted-foreground">No records found for this IMEI</p>
-        </main>
-      </div>
-    );
-  }
-
-  const activationRecord = records.find(r => r.activationDate) || records[0];
-  const totalEarned = records.filter(r => r.amount > 0).reduce((sum, r) => sum + r.amount, 0);
-  const totalWithheld = Math.abs(records.filter(r => r.amount < 0).reduce((sum, r) => sum + r.amount, 0));
-  const netAmount = totalEarned - totalWithheld;
-  const hasWithholding = totalWithheld > 0;
-
+  // Helper functions
   const handleSaveNotes = () => {
     updateIMEINotes(
       imei,
@@ -153,6 +134,29 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
       description: `Month ${month} payment has been added`,
     });
   };
+
+  // CONDITIONAL RETURN - AFTER ALL HOOKS
+  if (records.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Button variant="ghost" onClick={onBack} className="gap-2 mb-4">
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <p className="text-muted-foreground">No records found for this IMEI</p>
+        </main>
+      </div>
+    );
+  }
+
+  // Data calculations
+  const activationRecord = records.find(r => r.activationDate) || records[0];
+  const totalEarned = records.filter(r => r.amount > 0).reduce((sum, r) => sum + r.amount, 0);
+  const totalWithheld = Math.abs(records.filter(r => r.amount < 0).reduce((sum, r) => sum + r.amount, 0));
+  const netAmount = totalEarned - totalWithheld;
+  const hasWithholding = totalWithheld > 0;
 
   const renderMonthCard = (month: number) => {
     const expectedDate = calculateExpectedPaymentDate(activationRecord.activationDate, month);
