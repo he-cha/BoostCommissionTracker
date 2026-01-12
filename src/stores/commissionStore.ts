@@ -8,11 +8,13 @@ interface CommissionState {
   setRecords: (records: CommissionRecord[]) => void;
   uploadedFiles: FileUpload[];
   imeiNotes: Map<string, IMEINotes>;
+  dismissedAlerts: Set<string>;
   addRecords: (records: CommissionRecord[], fileMetadata?: { filename: string; fileId: string }) => void;
   deleteFile: (fileId: string) => void;
   updateRecord: (id: string, updates: Partial<CommissionRecord>) => void;
   deleteRecord: (id: string) => void;
   toggleActive: (imei: string) => void;
+  dismissAlert: (alertId: string) => void;
   getRecordsByIMEI: (imei: string) => CommissionRecord[];
   getMetrics: (filters?: { dateRange?: [string, string]; store?: string; category?: string }) => DashboardMetrics;
   getIMEISummaries: (filters?: { dateRange?: [string, string]; store?: string; saleType?: string; category?: string }) => IMEISummary[];
@@ -30,6 +32,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
   setRecords: (records: CommissionRecord[]) => set({ records }),
   uploadedFiles: [],
   imeiNotes: new Map(),
+  dismissedAlerts: new Set(),
   
   addRecords: (newRecords, fileMetadata) => {
     set((state) => {
@@ -103,6 +106,14 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     });
   },
   
+  dismissAlert: (alertId) => {
+    set((state) => {
+      const newDismissed = new Set(state.dismissedAlerts);
+      newDismissed.add(alertId);
+      return { dismissedAlerts: newDismissed };
+    });
+  },
+  
   getRecordsByIMEI: (imei) => {
     return get().records.filter(r => r.imei === imei);
   },
@@ -113,7 +124,8 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
   
   updateIMEINotes: (imei, notes, suspended, deactivated, blacklisted, byodSwap, customerName, customerNumber, customerEmail) => {
     set((state) => {
-      const newNotes = new Map(state.imeiNotes);      const existing = newNotes.get(imei) || {
+      const newNotes = new Map(state.imeiNotes);
+      const existing = newNotes.get(imei) || {
         imei,
         notes: '',
         withholdingResolved: false,
@@ -122,7 +134,8 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
         blacklisted: false,
         byodSwap: false,
       };
-      newNotes.set(imei, {
+      
+      const updatedNotes = {
         ...existing,
         notes: notes !== undefined ? notes : existing.notes,
         suspended: suspended !== undefined ? suspended : existing.suspended,
@@ -132,7 +145,20 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
         customerName: customerName !== undefined ? customerName : existing.customerName,
         customerNumber: customerNumber !== undefined ? customerNumber : existing.customerNumber,
         customerEmail: customerEmail !== undefined ? customerEmail : existing.customerEmail,
-      });
+      };
+      
+      newNotes.set(imei, updatedNotes);
+      
+      // If IMEI is marked as suspended, deactivated, or blacklisted, deactivate all its records
+      const shouldDeactivate = updatedNotes.suspended || updatedNotes.deactivated || updatedNotes.blacklisted;
+      
+      if (shouldDeactivate) {
+        const updatedRecords = state.records.map(r => 
+          r.imei === imei ? { ...r, isActive: false } : r
+        );
+        return { imeiNotes: newNotes, records: updatedRecords };
+      }
+      
       return { imeiNotes: newNotes };
     });
   },
@@ -442,6 +468,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
   getAlerts: () => {
     const summaries = get().getIMEISummaries();
     const imeiNotes = get().imeiNotes;
+    const dismissedAlerts = get().dismissedAlerts;
     const alerts: Alert[] = [];
     
     summaries.forEach(summary => {
@@ -509,7 +536,10 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       }
     });
     
-    return alerts.sort((a, b) => {
+    // Filter out dismissed alerts
+    const activeAlerts = alerts.filter(alert => !dismissedAlerts.has(alert.id));
+    
+    return activeAlerts.sort((a, b) => {
       const severityOrder = { high: 0, medium: 1, low: 2 };
       return severityOrder[a.severity] - severityOrder[b.severity];
     });
@@ -520,10 +550,14 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     // Only persist metadata, not full records
     uploadedFiles: state.uploadedFiles,
     imeiNotes: Array.from(state.imeiNotes.entries()),
+    dismissedAlerts: Array.from(state.dismissedAlerts),
   }),
   onRehydrateStorage: () => (state) => {
     if (state && Array.isArray(state.imeiNotes)) {
       state.imeiNotes = new Map(state.imeiNotes as any);
+    }
+    if (state && Array.isArray(state.dismissedAlerts)) {
+      state.dismissedAlerts = new Set(state.dismissedAlerts as any);
     }
   },
 }));

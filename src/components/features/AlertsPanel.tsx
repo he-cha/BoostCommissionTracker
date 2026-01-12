@@ -7,6 +7,7 @@ import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
 import { AlertTriangle, AlertCircle, XCircle, DollarSign, Filter, X, Search } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useCommissionStore } from '../../stores/commissionStore';
@@ -29,6 +30,8 @@ interface AlertsPanelProps {
 
 export function AlertsPanel({ alerts, onAlertClick, filters: externalFilters, onFiltersChange }: AlertsPanelProps) {
   const records = useCommissionStore((state) => state.records);
+  const dismissAlert = useCommissionStore((state) => state.dismissAlert);
+  const dismissedAlerts = useCommissionStore((state) => state.dismissedAlerts);
   
   // Use external filters if provided, otherwise use local state
   const [internalFilters, setInternalFilters] = useState({
@@ -284,17 +287,30 @@ export function AlertsPanel({ alerts, onAlertClick, filters: externalFilters, on
               key={alert.id}
               className={cn(
                 'border-l-4 transition-all',
-                getSeverityColor(alert.severity),
-                onAlertClick && 'cursor-pointer hover:shadow-lg hover:bg-card/80'
+                getSeverityColor(alert.severity)
               )}
-              onClick={() => onAlertClick?.(alert.imei)}
             >
               <CardContent className="pt-4">
                 <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={dismissedAlerts.has(alert.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        dismissAlert(alert.id);
+                      }
+                    }}
+                    className="mt-1"
+                  />
                   <div className={cn('mt-0.5', getSeverityColor(alert.severity))}>
                     {getAlertIcon(alert.type)}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div 
+                    className={cn(
+                      'flex-1 min-w-0',
+                      onAlertClick && 'cursor-pointer hover:opacity-80'
+                    )}
+                    onClick={() => onAlertClick?.(alert.imei)}
+                  >
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-semibold text-sm">{alert.message}</p>
                       <Badge variant="outline" className="text-xs capitalize">
