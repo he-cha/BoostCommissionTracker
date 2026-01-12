@@ -8,11 +8,15 @@ import { ArrowLeft, Search } from 'lucide-react';
 import { useCommissionStore } from '../stores/commissionStore';
 import { formatCurrency, formatDate } from '../lib/utils';
 
-export function SuspendedIMEIPage({ onBack }: { onBack: () => void }) {
+interface SuspendedIMEIPageProps {
+  onBack: () => void;
+  onIMEIClick: (imei: string) => void;
+}
+
+export function SuspendedIMEIPage({ onBack, onIMEIClick }: SuspendedIMEIPageProps) {
   const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
   const getIMEISummaries = useCommissionStore((state) => state.getIMEISummaries);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedIMEI, setSelectedIMEI] = useState<string | null>(null);
 
   // Find IMEIs that are suspended
   const suspendedIMEIs = useMemo(() => {
@@ -38,12 +42,6 @@ export function SuspendedIMEIPage({ onBack }: { onBack: () => void }) {
       imeiNotesMap.get(s.imei)?.customerNumber?.toLowerCase().includes(lower)
     );
   }, [suspendedSummaries, searchTerm, imeiNotesMap]);
-
-  // Navigation to IMEI detail
-  if (selectedIMEI) {
-    const IMEIDetailPage = require('./IMEIDetailPage').IMEIDetailPage;
-    return <IMEIDetailPage imei={selectedIMEI} onBack={() => setSelectedIMEI(null)} onEdit={() => {}} />;
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -114,7 +112,7 @@ export function SuspendedIMEIPage({ onBack }: { onBack: () => void }) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setSelectedIMEI(summary.imei)}
+                              onClick={() => onIMEIClick(summary.imei)}
                             >
                               View Details
                             </Button>

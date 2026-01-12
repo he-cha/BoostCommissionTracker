@@ -9,11 +9,15 @@ import { ArrowLeft, Search } from 'lucide-react';
 import { useCommissionStore } from '../stores/commissionStore';
 import { formatCurrency, formatDate } from '../lib/utils';
 
-export function BYODPage({ onBack }: { onBack: () => void }) {
+interface BYODPageProps {
+  onBack: () => void;
+  onIMEIClick: (imei: string) => void;
+}
+
+export function BYODPage({ onBack, onIMEIClick }: BYODPageProps) {
   const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
   const getIMEISummaries = useCommissionStore((state) => state.getIMEISummaries);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedIMEI, setSelectedIMEI] = useState<string | null>(null);
 
   // Find IMEIs that are BYOD swaps
   const byodIMEIs = useMemo(() => {
@@ -37,12 +41,6 @@ export function BYODPage({ onBack }: { onBack: () => void }) {
       s.imei.toLowerCase().includes(lower)
     );
   }, [byodSummaries, searchTerm]);
-
-  // Navigation to IMEI detail
-  if (selectedIMEI) {
-    const IMEIDetailPage = require('./IMEIDetailPage').IMEIDetailPage;
-    return <IMEIDetailPage imei={selectedIMEI} onBack={() => setSelectedIMEI(null)} onEdit={() => {}} />;
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,7 +111,7 @@ export function BYODPage({ onBack }: { onBack: () => void }) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setSelectedIMEI(summary.imei)}
+                              onClick={() => onIMEIClick(summary.imei)}
                             >
                               View Details
                             </Button>

@@ -131,19 +131,34 @@ export function DashboardPage() {
 
   // CONDITIONAL RENDERS - AFTER ALL HOOKS
   if (currentView === 'notes') {
-    return <NotesPendingPage onBack={goBack} />;
+    return <NotesPendingPage onBack={goBack} onIMEIClick={(imei) => {
+      setSelectedIMEI(imei);
+      navigateTo('imei-detail');
+    }} />;
   }
   if (currentView === 'suspended') {
-    return <SuspendedIMEIPage onBack={goBack} />;
+    return <SuspendedIMEIPage onBack={goBack} onIMEIClick={(imei) => {
+      setSelectedIMEI(imei);
+      navigateTo('imei-detail');
+    }} />;
   }
   if (currentView === 'deactivated') {
-    return <DeactivatedIMEIPage onBack={goBack} />;
+    return <DeactivatedIMEIPage onBack={goBack} onIMEIClick={(imei) => {
+      setSelectedIMEI(imei);
+      navigateTo('imei-detail');
+    }} />;
   }
   if (currentView === 'blacklist') {
-    return <BlacklistPage onBack={goBack} />;
+    return <BlacklistPage onBack={goBack} onIMEIClick={(imei) => {
+      setSelectedIMEI(imei);
+      navigateTo('imei-detail');
+    }} />;
   }
   if (currentView === 'byod') {
-    return <BYODPage onBack={goBack} />;
+    return <BYODPage onBack={goBack} onIMEIClick={(imei) => {
+      setSelectedIMEI(imei);
+      navigateTo('imei-detail');
+    }} />;
   }
 
   if (currentView === 'alerts') {

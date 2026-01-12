@@ -8,11 +8,15 @@ import { useCommissionStore } from '../stores/commissionStore';
 
 const ITEMS_PER_PAGE = 25;
 
-export function NotesPendingPage({ onBack }: { onBack: () => void }) {
+interface NotesPendingPageProps {
+  onBack: () => void;
+  onIMEIClick: (imei: string) => void;
+}
+
+export function NotesPendingPage({ onBack, onIMEIClick }: NotesPendingPageProps) {
   const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
   const getIMEISummaries = useCommissionStore((state) => state.getIMEISummaries);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedIMEI, setSelectedIMEI] = useState<string | null>(null);
 
   // Find IMEIs with notes saved (not empty)
   const notesIMEIs = useMemo(() => {
@@ -35,13 +39,6 @@ export function NotesPendingPage({ onBack }: { onBack: () => void }) {
   }, [filteredSummaries, currentPage]);
   const totalPages = Math.ceil(filteredSummaries.length / ITEMS_PER_PAGE) || 1;
 
-  // Navigation to IMEI detail
-  if (selectedIMEI) {
-    // Lazy-load IMEIDetailPage to avoid circular import
-    const IMEIDetailPage = require('./IMEIDetailPage').IMEIDetailPage;
-    return <IMEIDetailPage imei={selectedIMEI} onBack={() => setSelectedIMEI(null)} onEdit={() => {}} />;
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -57,7 +54,7 @@ export function NotesPendingPage({ onBack }: { onBack: () => void }) {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-          onIMEIClick={setSelectedIMEI}
+          onIMEIClick={onIMEIClick}
         />
       </main>
     </div>
