@@ -39,6 +39,7 @@ export function DashboardPage() {
   const [dashboardStore, setDashboardStore] = useState<string>(' ');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<string>('summary');
   const ITEMS_PER_PAGE = 25;
 
   // Filter states for each page view (preserved across navigation)
@@ -145,8 +146,12 @@ export function DashboardPage() {
   }, [setRecords]);
 
   // Navigation helpers
-  const navigateTo = useCallback((view: View) => {
+  const navigateTo = useCallback((view: View, fromTab?: string) => {
     setViewHistory(prev => [...prev, currentView]);
+    if (fromTab) {
+      // Store the tab we're navigating from
+      sessionStorage.setItem('lastActiveTab', fromTab);
+    }
     setCurrentView(view);
   }, [currentView]);
 
@@ -158,6 +163,15 @@ export function DashboardPage() {
     const lastView = viewHistory[viewHistory.length - 1];
     setViewHistory(prev => prev.slice(0, -1));
     setCurrentView(lastView);
+    
+    // If returning to dashboard, restore the tab we were on
+    if (lastView === 'dashboard') {
+      const lastTab = sessionStorage.getItem('lastActiveTab');
+      if (lastTab) {
+        setActiveTab(lastTab);
+        sessionStorage.removeItem('lastActiveTab');
+      }
+    }
   }, [viewHistory]);
   
   // Reset to page 1 when filters change
@@ -394,7 +408,7 @@ export function DashboardPage() {
           />
         </div>
 
-        <Tabs defaultValue="summary" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="summary">IMEI Summary</TabsTrigger>
             <TabsTrigger value="alerts" className="gap-2">
@@ -438,7 +452,7 @@ export function DashboardPage() {
               alerts={alerts}
               onAlertClick={(imei) => {
                 setSelectedIMEI(imei);
-                navigateTo('imei-detail');
+                navigateTo('imei-detail', 'alerts');
               }}
             />
           </TabsContent>
