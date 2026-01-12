@@ -38,18 +38,29 @@ export function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 25;
 
-  // Conditional rendering for custom pages
+
+
+
+
+  // ...all hooks and function declarations above...
+
+  // Navigation helpers
+
+
+  // ...rest of hooks and logic...
+
+
+  // ...all hooks and function declarations...
+
+  // Navigation helpers
+
+
+  // Place conditional rendering for custom pages here, after all hooks/functions and before the main return
   if (currentView === 'notes-pending') {
-    return <NotesPendingPage onBack={() => {
-      setCurrentView('dashboard');
-      setViewHistory([]);
-    }} />;
+    return <NotesPendingPage onBack={goBack} />;
   }
   if (currentView === 'suspended-deactivated') {
-    return <SuspendedDeactivatedPage onBack={() => {
-      setCurrentView('dashboard');
-      setViewHistory([]);
-    }} />;
+    return <SuspendedDeactivatedPage onBack={goBack} />;
   }
 
   // Suspended/Deactivated counts
@@ -297,20 +308,14 @@ export function DashboardPage() {
             <TabsTrigger value="upload">Upload CSV</TabsTrigger>
             <button
               className="ml-2 px-3 py-1 rounded bg-muted text-foreground border border-border hover:bg-accent transition"
-              onClick={() => {
-                setViewHistory([currentView]);
-                setCurrentView('notes-pending');
-              }}
+              onClick={() => navigateTo('notes-pending')}
               type="button"
             >
               Notes/Pending
             </button>
             <button
               className="ml-2 px-3 py-1 rounded bg-muted text-foreground border border-border hover:bg-accent transition"
-              onClick={() => {
-                setViewHistory([currentView]);
-                setCurrentView('suspended-deactivated');
-              }}
+              onClick={() => navigateTo('suspended-deactivated')}
               type="button"
             >
               Deactivated/Suspended
