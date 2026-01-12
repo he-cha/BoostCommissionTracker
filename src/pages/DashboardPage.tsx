@@ -1,3 +1,4 @@
+
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Header } from '../components/layout/Header';
 import { MetricsCard } from '../components/features/MetricsCard';
@@ -9,6 +10,8 @@ import { FilterBar } from '../components/features/FilterBar';
 import { AlertsPage } from './AlertsPage';
 import { IMEIDetailPage } from './IMEIDetailPage';
 import { EditPaymentPage } from './EditPaymentPage';
+import { SuspendedDeactivatedPage } from './SuspendedDeactivatedPage';
+import { NotesPendingPage } from './NotesPendingPage';
 import { useCommissionStore } from '../stores/commissionStore';
 import { DollarSign, TrendingDown, TrendingUp, Smartphone, AlertTriangle, FileWarning } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
@@ -17,10 +20,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Input } from '../components/ui/input';
 
-type View = 'dashboard' | 'alerts' | 'imei-detail' | 'edit-payment';
+type View = 'dashboard' | 'alerts' | 'imei-detail' | 'edit-payment' | 'suspended-deactivated' | 'notes-pending';
+
 
 export function DashboardPage() {
+    // Suspended/Deactivated counts
+    const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
+    const imeiNotesArr = useMemo(() => Array.from(imeiNotesMap.values()), [imeiNotesMap]);
+    const suspendedCount = imeiNotesArr.filter(n => n.suspended).length;
+    const deactivatedCount = imeiNotesArr.filter(n => n.deactivated).length;
+
+    // ...existing code...
+
+    // Place navigation helpers and conditional views AFTER all state declarations
+
   const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [viewHistory, setViewHistory] = useState<View[]>([]);
   const [selectedIMEI, setSelectedIMEI] = useState<string>('');
   const [selectedRecordId, setSelectedRecordId] = useState<string>('');
   const [filters, setFilters] = useState<any>({});
@@ -98,18 +113,33 @@ export function DashboardPage() {
     setCurrentPage(1);
   }, []);
 
+  // Navigation helpers
+  const navigateTo = (view: View) => {
+    setViewHistory(prev => [...prev, currentView]);
+    setCurrentView(view);
+  };
+
+  const goBack = () => {
+    setViewHistory(prev => {
+      if (prev.length === 0) return prev;
+      const lastView = prev[prev.length - 1];
+      setCurrentView(lastView);
+      return prev.slice(0, -1);
+    });
+  };
+
   if (currentView === 'alerts') {
-    return <AlertsPage onBack={() => setCurrentView('dashboard')} />;
+    return <AlertsPage onBack={goBack} />;
   }
 
   if (currentView === 'imei-detail') {
     return (
       <IMEIDetailPage
         imei={selectedIMEI}
-        onBack={() => setCurrentView('dashboard')}
+        onBack={goBack}
         onEdit={(recordId) => {
           setSelectedRecordId(recordId);
-          setCurrentView('edit-payment');
+          navigateTo('edit-payment');
         }}
       />
     );
@@ -119,7 +149,7 @@ export function DashboardPage() {
     return (
       <EditPaymentPage
         recordId={selectedRecordId}
-        onBack={() => setCurrentView('imei-detail')}
+        onBack={goBack}
       />
     );
   }
@@ -179,6 +209,33 @@ export function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                          <MetricsCard
+                            title="IMEI Notes/Pending"
+                            value={imeiNotesArr.filter(n => !n.notes).length.toString()}
+                            icon={AlertTriangle}
+                            trend={imeiNotesArr.filter(n => !n.notes).length > 0 ? 'negative' : 'positive'}
+                            badge={imeiNotesArr.filter(n => !n.notes).length}
+                            clickable
+                            onClick={() => navigateTo('notes-pending')}
+                          />
+                  <MetricsCard
+                    title="Suspended IMEIs"
+                    value={suspendedCount.toString()}
+                    icon={Smartphone}
+                    trend={suspendedCount > 0 ? 'neutral' : 'positive'}
+                    badge={suspendedCount}
+                    clickable
+                    onClick={() => navigateTo('suspended-deactivated')}
+                  />
+                  <MetricsCard
+                    title="Deactivated IMEIs"
+                    value={deactivatedCount.toString()}
+                    icon={FileWarning}
+                    trend={deactivatedCount > 0 ? 'negative' : 'neutral'}
+                    badge={deactivatedCount}
+                    clickable
+                    onClick={() => navigateTo('suspended-deactivated')}
+                  />
           <MetricsCard
             title="Total Earned"
             value={formatCurrency(metrics.totalEarned)}

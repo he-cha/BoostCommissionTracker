@@ -29,6 +29,10 @@ export interface IMEINotes {
   imei: string;
   notes: string;
   withholdingResolved: boolean;
+  suspended?: boolean;
+  suspendedInfo?: string;
+  deactivated?: boolean;
+  deactivatedInfo?: string;
 }
 
 export interface DashboardMetrics {

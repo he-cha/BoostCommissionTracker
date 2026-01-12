@@ -33,6 +33,10 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
   
   const [notes, setNotes] = useState(imeiNotes?.notes || '');
   const [withholdingResolved, setWithholdingResolved] = useState(imeiNotes?.withholdingResolved || false);
+  const [suspended, setSuspended] = useState(imeiNotes?.suspended || false);
+  const [suspendedInfo, setSuspendedInfo] = useState(imeiNotes?.suspendedInfo || '');
+  const [deactivated, setDeactivated] = useState(imeiNotes?.deactivated || false);
+  const [deactivatedInfo, setDeactivatedInfo] = useState(imeiNotes?.deactivatedInfo || '');
   
   // Month payment states (for manual entry)
   const [monthPayments, setMonthPayments] = useState<{ [key: number]: { amount: string; received: boolean; date: string } }>({});
@@ -59,11 +63,11 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
   const hasWithholding = totalWithheld > 0;
 
   const handleSaveNotes = () => {
-    updateIMEINotes(imei, notes);
+    updateIMEINotes(imei, notes, suspended, suspendedInfo, deactivated, deactivatedInfo);
     updateWithholdingResolved(imei, withholdingResolved);
     toast({
-      title: 'Notes saved',
-      description: 'IMEI notes and withholding status updated successfully',
+      title: 'Notes & Status saved',
+      description: 'IMEI notes, status, and withholding updated successfully',
     });
   };
 
@@ -483,15 +487,39 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
           </Card>
         )}
 
-        {/* Notes Section */}
+        {/* Status & Notes Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Notes</CardTitle>
+            <CardTitle>Status & Notes</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Add notes or comments about this activation
+              Update IMEI status, info, and notes
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex gap-6 mb-2">
+              <div className="flex items-center gap-2">
+                <Checkbox id="imei-suspended" checked={suspended} onCheckedChange={checked => setSuspended(!!checked)} />
+                <Label htmlFor="imei-suspended" className="cursor-pointer">Suspended</Label>
+              </div>
+              <Input
+                type="text"
+                placeholder="Suspended info (reason, date, etc.)"
+                value={suspendedInfo}
+                onChange={e => setSuspendedInfo(e.target.value)}
+                className="w-48"
+              />
+              <div className="flex items-center gap-2">
+                <Checkbox id="imei-deactivated" checked={deactivated} onCheckedChange={checked => setDeactivated(!!checked)} />
+                <Label htmlFor="imei-deactivated" className="cursor-pointer">Deactivated</Label>
+              </div>
+              <Input
+                type="text"
+                placeholder="Deactivated info (reason, date, etc.)"
+                value={deactivatedInfo}
+                onChange={e => setDeactivatedInfo(e.target.value)}
+                className="w-48"
+              />
+            </div>
             <Textarea
               placeholder="Enter notes here..."
               value={notes}

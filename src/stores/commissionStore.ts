@@ -18,7 +18,7 @@ interface CommissionState {
   getIMEISummaries: (filters?: { dateRange?: [string, string]; store?: string; saleType?: string; category?: string }) => IMEISummary[];
   getAlerts: () => Alert[];
   clearRecords: () => void;
-  updateIMEINotes: (imei: string, notes: string) => void;
+  updateIMEINotes: (imei: string, notes: string, suspended?: boolean, suspendedInfo?: string, deactivated?: boolean, deactivatedInfo?: string) => void;
   updateWithholdingResolved: (imei: string, resolved: boolean) => void;
   getIMEINotes: (imei: string) => IMEINotes | undefined;
   addMonthPayment: (imei: string, month: number, amount: number, paymentReceived: boolean, paymentDate?: string) => void;
@@ -111,11 +111,18 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     set({ records: [] });
   },
   
-  updateIMEINotes: (imei, notes) => {
+  updateIMEINotes: (imei, notes, suspended, suspendedInfo, deactivated, deactivatedInfo) => {
     set((state) => {
       const newNotes = new Map(state.imeiNotes);
       const existing = newNotes.get(imei) || { imei, notes: '', withholdingResolved: false };
-      newNotes.set(imei, { ...existing, notes });
+      newNotes.set(imei, {
+        ...existing,
+        notes,
+        suspended: suspended ?? existing.suspended,
+        suspendedInfo: suspendedInfo ?? existing.suspendedInfo,
+        deactivated: deactivated ?? existing.deactivated,
+        deactivatedInfo: deactivatedInfo ?? existing.deactivatedInfo,
+      });
       return { imeiNotes: newNotes };
     });
   },

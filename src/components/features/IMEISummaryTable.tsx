@@ -21,6 +21,7 @@ interface IMEISummaryTableProps {
 }
 
 export function IMEISummaryTable({ summaries, totalRecords, currentPage, totalPages, onPageChange, onIMEIClick }: IMEISummaryTableProps) {
+    const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const toggleActive = useCommissionStore((state) => state.toggleActive);
@@ -115,7 +116,13 @@ export function IMEISummaryTable({ summaries, totalRecords, currentPage, totalPa
                 </TableRow>
               ) : (
                 filteredSummaries.map((summary) => (
-                  <TableRow key={summary.imei} className={cn("hover:bg-muted/30", !summary.isActive && "opacity-50")}>
+                  (() => {
+                    const notes = imeiNotesMap.get(summary.imei);
+                    let rowColor = "";
+                    if (notes?.deactivated) rowColor = "bg-red-100";
+                    else if (notes?.suspended) rowColor = "bg-white";
+                    return (
+                      <TableRow key={summary.imei} className={cn("hover:bg-muted/30", !summary.isActive && "opacity-50", rowColor)}>
                     <TableCell className="font-mono text-sm font-medium">
                       <button
                         onClick={() => onIMEIClick(summary.imei)}
