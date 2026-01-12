@@ -34,12 +34,30 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
   const [notes, setNotes] = useState(imeiNotes?.notes || '');
   const [withholdingResolved, setWithholdingResolved] = useState(imeiNotes?.withholdingResolved || false);
   const [suspended, setSuspended] = useState(imeiNotes?.suspended || false);
-  const [suspendedInfo, setSuspendedInfo] = useState(imeiNotes?.suspendedInfo || '');
   const [deactivated, setDeactivated] = useState(imeiNotes?.deactivated || false);
-  const [deactivatedInfo, setDeactivatedInfo] = useState(imeiNotes?.deactivatedInfo || '');
+  const [blacklisted, setBlacklisted] = useState(imeiNotes?.blacklisted || false);
+  const [byodSwap, setByodSwap] = useState(imeiNotes?.byodSwap || false);
+  const [customerName, setCustomerName] = useState(imeiNotes?.customerName || '');
+  const [customerNumber, setCustomerNumber] = useState(imeiNotes?.customerNumber || '');
+  const [customerEmail, setCustomerEmail] = useState(imeiNotes?.customerEmail || '');
   
   // Month payment states (for manual entry)
   const [monthPayments, setMonthPayments] = useState<{ [key: number]: { amount: string; received: boolean; date: string } }>({});
+
+  // Enforce mutual exclusivity for suspended and deactivated
+  const handleSuspendedChange = (checked: boolean) => {
+    setSuspended(checked);
+    if (checked) {
+      setDeactivated(false); // Uncheck deactivated when suspended is checked
+    }
+  };
+
+  const handleDeactivatedChange = (checked: boolean) => {
+    setDeactivated(checked);
+    if (checked) {
+      setSuspended(false); // Uncheck suspended when deactivated is checked
+    }
+  };
 
   if (records.length === 0) {
     return (
@@ -63,11 +81,21 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
   const hasWithholding = totalWithheld > 0;
 
   const handleSaveNotes = () => {
-    updateIMEINotes(imei, notes, suspended, suspendedInfo, deactivated, deactivatedInfo);
+    updateIMEINotes(
+      imei,
+      notes,
+      suspended,
+      deactivated,
+      blacklisted,
+      byodSwap,
+      customerName,
+      customerNumber,
+      customerEmail
+    );
     updateWithholdingResolved(imei, withholdingResolved);
     toast({
-      title: 'Notes & Status saved',
-      description: 'IMEI notes, status, and withholding updated successfully',
+      title: 'Saved successfully',
+      description: 'IMEI notes and status have been updated',
     });
   };
 
@@ -394,7 +422,7 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Button variant="ghost" onClick={onBack} className="gap-2 mb-6">
           <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
+          Back
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -411,11 +439,15 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
                       <Calendar className="h-4 w-4" />
                       Activated: {formatDate(activationRecord.activationDate)}
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Badge variant="outline">{activationRecord.saleType}</Badge>
                       {activationRecord.store && (
                         <Badge variant="outline">{activationRecord.store}</Badge>
                       )}
+                      {suspended && <Badge variant="destructive">Suspended</Badge>}
+                      {deactivated && <Badge variant="destructive">Deactivated</Badge>}
+                      {blacklisted && <Badge variant="destructive">Blacklisted</Badge>}
+                      {byodSwap && <Badge variant="outline">BYOD Swap</Badge>}
                     </div>
                   </div>
                 </div>
@@ -492,44 +524,97 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
           <CardHeader>
             <CardTitle>Status & Notes</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Update IMEI status, info, and notes
+              Update IMEI status, customer information, and notes
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-6 mb-2">
+            {/* Status Checkboxes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center gap-2">
-                <Checkbox id="imei-suspended" checked={suspended} onCheckedChange={checked => setSuspended(!!checked)} />
-                <Label htmlFor="imei-suspended" className="cursor-pointer">Suspended</Label>
+                <Checkbox 
+                  id="imei-suspended" 
+                  checked={suspended} 
+                  onCheckedChange={handleSuspendedChange} 
+                />
+                <Label htmlFor="imei-suspended" className="cursor-pointer font-semibold">Suspended</Label>
               </div>
-              <Input
-                type="text"
-                placeholder="Suspended info (reason, date, etc.)"
-                value={suspendedInfo}
-                onChange={e => setSuspendedInfo(e.target.value)}
-                className="w-48"
-              />
               <div className="flex items-center gap-2">
-                <Checkbox id="imei-deactivated" checked={deactivated} onCheckedChange={checked => setDeactivated(!!checked)} />
-                <Label htmlFor="imei-deactivated" className="cursor-pointer">Deactivated</Label>
+                <Checkbox 
+                  id="imei-deactivated" 
+                  checked={deactivated} 
+                  onCheckedChange={handleDeactivatedChange} 
+                />
+                <Label htmlFor="imei-deactivated" className="cursor-pointer font-semibold">Deactivated</Label>
               </div>
-              <Input
-                type="text"
-                placeholder="Deactivated info (reason, date, etc.)"
-                value={deactivatedInfo}
-                onChange={e => setDeactivatedInfo(e.target.value)}
-                className="w-48"
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="imei-blacklisted" 
+                  checked={blacklisted} 
+                  onCheckedChange={(checked) => setBlacklisted(!!checked)} 
+                />
+                <Label htmlFor="imei-blacklisted" className="cursor-pointer font-semibold">Blacklist</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="imei-byod" 
+                  checked={byodSwap} 
+                  onCheckedChange={(checked) => setByodSwap(!!checked)} 
+                />
+                <Label htmlFor="imei-byod" className="cursor-pointer font-semibold">BYOD SWAP</Label>
+              </div>
+            </div>
+
+            {/* Customer Information (shown if suspended, deactivated, or blacklisted) */}
+            {(suspended || deactivated || blacklisted) && (
+              <div className="border-t pt-4 space-y-3">
+                <Label className="text-sm font-semibold">Customer Information</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Customer Name</Label>
+                    <Input
+                      type="text"
+                      placeholder="Full name"
+                      value={customerName}
+                      onChange={e => setCustomerName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Customer Number</Label>
+                    <Input
+                      type="tel"
+                      placeholder="Phone number"
+                      value={customerNumber}
+                      onChange={e => setCustomerNumber(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Customer Email</Label>
+                    <Input
+                      type="email"
+                      placeholder="Email address"
+                      value={customerEmail}
+                      onChange={e => setCustomerEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Notes Section */}
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                placeholder="Enter notes here..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                className="resize-none"
               />
             </div>
-            <Textarea
-              placeholder="Enter notes here..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={4}
-              className="resize-none"
-            />
+
             <Button onClick={handleSaveNotes} className="gap-2">
               <Save className="h-4 w-4" />
-              Save Notes & Status
+              Save All Changes
             </Button>
           </CardContent>
         </Card>

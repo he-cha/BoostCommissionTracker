@@ -18,7 +18,7 @@ interface CommissionState {
   getIMEISummaries: (filters?: { dateRange?: [string, string]; store?: string; saleType?: string; category?: string }) => IMEISummary[];
   getAlerts: () => Alert[];
   clearRecords: () => void;
-  updateIMEINotes: (imei: string, notes: string, suspended?: boolean, suspendedInfo?: string, deactivated?: boolean, deactivatedInfo?: string) => void;
+  updateIMEINotes: (imei: string, notes?: string, suspended?: boolean, deactivated?: boolean, blacklisted?: boolean, byodSwap?: boolean, customerName?: string, customerNumber?: string, customerEmail?: string) => void;
   updateWithholdingResolved: (imei: string, resolved: boolean) => void;
   getIMEINotes: (imei: string) => IMEINotes | undefined;
   addMonthPayment: (imei: string, month: number, amount: number, paymentReceived: boolean, paymentDate?: string) => void;
@@ -111,17 +111,27 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     set({ records: [] });
   },
   
-  updateIMEINotes: (imei, notes, suspended, suspendedInfo, deactivated, deactivatedInfo) => {
+  updateIMEINotes: (imei, notes, suspended, deactivated, blacklisted, byodSwap, customerName, customerNumber, customerEmail) => {
     set((state) => {
-      const newNotes = new Map(state.imeiNotes);
-      const existing = newNotes.get(imei) || { imei, notes: '', withholdingResolved: false };
+      const newNotes = new Map(state.imeiNotes);      const existing = newNotes.get(imei) || {
+        imei,
+        notes: '',
+        withholdingResolved: false,
+        suspended: false,
+        deactivated: false,
+        blacklisted: false,
+        byodSwap: false,
+      };
       newNotes.set(imei, {
         ...existing,
-        notes,
-        suspended: suspended ?? existing.suspended,
-        suspendedInfo: suspendedInfo ?? existing.suspendedInfo,
-        deactivated: deactivated ?? existing.deactivated,
-        deactivatedInfo: deactivatedInfo ?? existing.deactivatedInfo,
+        notes: notes !== undefined ? notes : existing.notes,
+        suspended: suspended !== undefined ? suspended : existing.suspended,
+        deactivated: deactivated !== undefined ? deactivated : existing.deactivated,
+        blacklisted: blacklisted !== undefined ? blacklisted : existing.blacklisted,
+        byodSwap: byodSwap !== undefined ? byodSwap : existing.byodSwap,
+        customerName: customerName !== undefined ? customerName : existing.customerName,
+        customerNumber: customerNumber !== undefined ? customerNumber : existing.customerNumber,
+        customerEmail: customerEmail !== undefined ? customerEmail : existing.customerEmail,
       });
       return { imeiNotes: newNotes };
     });
@@ -130,7 +140,15 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
   updateWithholdingResolved: (imei, resolved) => {
     set((state) => {
       const newNotes = new Map(state.imeiNotes);
-      const existing = newNotes.get(imei) || { imei, notes: '', withholdingResolved: false };
+      const existing = newNotes.get(imei) || {
+        imei,
+        notes: '',
+        withholdingResolved: false,
+        suspended: false,
+        deactivated: false,
+        blacklisted: false,
+        byodSwap: false,
+      };
       newNotes.set(imei, { ...existing, withholdingResolved: resolved });
       return { imeiNotes: newNotes };
     });
@@ -427,6 +445,13 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     const alerts: Alert[] = [];
     
     summaries.forEach(summary => {
+      const notes = imeiNotes.get(summary.imei);
+      
+      // Skip IMEIs that are suspended, deactivated, blacklisted, or have notes
+      if (notes?.suspended || notes?.deactivated || notes?.blacklisted || (notes?.notes && notes.notes.trim() !== '')) {
+        return;
+      }
+      
       // Check for missing months (sequence gaps)
       const paidMonths = summary.monthsStatus
         .filter(m => m.status === 'paid')
@@ -472,7 +497,6 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       });
       
       // Check for negative commissions (only if not resolved)
-      const notes = imeiNotes.get(summary.imei);
       if (summary.totalWithheld > 0 && !notes?.withholdingResolved) {
         alerts.push({
           id: `${summary.imei}-negative`,

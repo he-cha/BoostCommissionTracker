@@ -10,7 +10,10 @@ import { FilterBar } from '../components/features/FilterBar';
 import { AlertsPage } from './AlertsPage';
 import { IMEIDetailPage } from './IMEIDetailPage';
 import { EditPaymentPage } from './EditPaymentPage';
-import { SuspendedDeactivatedPage } from './SuspendedDeactivatedPage';
+import { SuspendedIMEIPage } from './SuspendedIMEIPage';
+import { DeactivatedIMEIPage } from './DeactivatedIMEIPage';
+import { BlacklistPage } from './BlacklistPage';
+import { BYODPage } from './BYODPage';
 import { NotesPendingPage } from './NotesPendingPage';
 import { useCommissionStore } from '../stores/commissionStore';
 import { DollarSign, TrendingDown, TrendingUp, Smartphone, AlertTriangle, FileWarning } from 'lucide-react';
@@ -20,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Input } from '../components/ui/input';
 
-type View = 'dashboard' | 'alerts' | 'imei-detail' | 'edit-payment' | 'suspended-deactivated' | 'notes-pending';
+type View = 'dashboard' | 'alerts' | 'imei-detail' | 'edit-payment' | 'suspended' | 'deactivated' | 'blacklist' | 'byod' | 'notes';
 
 
 
@@ -56,18 +59,30 @@ export function DashboardPage() {
   // ...all hooks and function declarations...
 
   // Place conditional rendering for custom pages here, after all hooks/functions and before the main return
-  if (currentView === 'notes-pending') {
+  if (currentView === 'notes') {
     return <NotesPendingPage onBack={goBack} />;
   }
-  if (currentView === 'suspended-deactivated') {
-    return <SuspendedDeactivatedPage onBack={goBack} />;
+  if (currentView === 'suspended') {
+    return <SuspendedIMEIPage onBack={goBack} />;
+  }
+  if (currentView === 'deactivated') {
+    return <DeactivatedIMEIPage onBack={goBack} />;
+  }
+  if (currentView === 'blacklist') {
+    return <BlacklistPage onBack={goBack} />;
+  }
+  if (currentView === 'byod') {
+    return <BYODPage onBack={goBack} />;
   }
 
-  // Suspended/Deactivated counts
+  // Counts for metric cards
   const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
   const imeiNotesArr = useMemo(() => Array.from(imeiNotesMap.values()), [imeiNotesMap]);
+  const notesCount = imeiNotesArr.filter(n => n.notes && n.notes.trim() !== '').length;
   const suspendedCount = imeiNotesArr.filter(n => n.suspended).length;
   const deactivatedCount = imeiNotesArr.filter(n => n.deactivated).length;
+  const blacklistCount = imeiNotesArr.filter(n => n.blacklisted).length;
+  const byodCount = imeiNotesArr.filter(n => n.byodSwap).length;
   
   const { records, getMetrics, getIMEISummaries, getAlerts, setRecords } = useCommissionStore();
   
@@ -215,33 +230,51 @@ export function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                          <MetricsCard
-                            title="IMEI Notes/Pending"
-                            value={imeiNotesArr.filter(n => !n.notes || n.notes.trim() === '').length.toString()}
-                            icon={AlertTriangle}
-                            trend={imeiNotesArr.filter(n => !n.notes || n.notes.trim() === '').length > 0 ? 'negative' : 'positive'}
-                            badge={imeiNotesArr.filter(n => !n.notes || n.notes.trim() === '').length}
-                            clickable
-                            onClick={() => navigateTo('notes-pending')}
-                          />
-                  <MetricsCard
-                    title="Suspended IMEIs"
-                    value={suspendedCount.toString()}
-                    icon={Smartphone}
-                    trend={suspendedCount > 0 ? 'neutral' : 'positive'}
-                    badge={suspendedCount}
-                    clickable
-                    onClick={() => navigateTo('suspended-deactivated')}
-                  />
-                  <MetricsCard
-                    title="Deactivated IMEIs"
-                    value={deactivatedCount.toString()}
-                    icon={FileWarning}
-                    trend={deactivatedCount > 0 ? 'negative' : 'neutral'}
-                    badge={deactivatedCount}
-                    clickable
-                    onClick={() => navigateTo('suspended-deactivated')}
-                  />
+          <MetricsCard
+            title="IMEIs with Notes"
+            value={notesCount.toString()}
+            icon={FileWarning}
+            trend={notesCount > 0 ? 'neutral' : 'positive'}
+            badge={notesCount}
+            clickable
+            onClick={() => navigateTo('notes')}
+          />
+          <MetricsCard
+            title="Suspended IMEIs"
+            value={suspendedCount.toString()}
+            icon={Smartphone}
+            trend={suspendedCount > 0 ? 'neutral' : 'positive'}
+            badge={suspendedCount}
+            clickable
+            onClick={() => navigateTo('suspended')}
+          />
+          <MetricsCard
+            title="Deactivated IMEIs"
+            value={deactivatedCount.toString()}
+            icon={FileWarning}
+            trend={deactivatedCount > 0 ? 'negative' : 'neutral'}
+            badge={deactivatedCount}
+            clickable
+            onClick={() => navigateTo('deactivated')}
+          />
+          <MetricsCard
+            title="Blacklisted"
+            value={blacklistCount.toString()}
+            icon={AlertTriangle}
+            trend={blacklistCount > 0 ? 'negative' : 'positive'}
+            badge={blacklistCount}
+            clickable
+            onClick={() => navigateTo('blacklist')}
+          />
+          <MetricsCard
+            title="BYOD Swaps"
+            value={byodCount.toString()}
+            icon={Smartphone}
+            trend="neutral"
+            badge={byodCount}
+            clickable
+            onClick={() => navigateTo('byod')}
+          />
           <MetricsCard
             title="Total Earned"
             value={formatCurrency(metrics.totalEarned)}
@@ -289,20 +322,6 @@ export function DashboardPage() {
               )}
             </TabsTrigger>
             <TabsTrigger value="upload">Upload CSV</TabsTrigger>
-            <button
-              className="ml-2 px-3 py-1 rounded bg-muted text-foreground border border-border hover:bg-accent transition"
-              onClick={() => navigateTo('notes-pending')}
-              type="button"
-            >
-              Notes/Pending
-            </button>
-            <button
-              className="ml-2 px-3 py-1 rounded bg-muted text-foreground border border-border hover:bg-accent transition"
-              onClick={() => navigateTo('suspended-deactivated')}
-              type="button"
-            >
-              Deactivated/Suspended
-            </button>
           </TabsList>
 
           <TabsContent value="summary" className="space-y-6">

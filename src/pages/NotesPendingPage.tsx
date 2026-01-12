@@ -14,10 +14,10 @@ export function NotesPendingPage({ onBack }: { onBack: () => void }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIMEI, setSelectedIMEI] = useState<string | null>(null);
 
-  // Find IMEIs with missing or empty notes (pending state)
+  // Find IMEIs with notes saved (not empty)
   const notesIMEIs = useMemo(() => {
     return Array.from(imeiNotesMap.values())
-      .filter(n => !n.notes || n.notes.trim() === '')
+      .filter(n => n.notes && n.notes.trim() !== '')
       .map(n => n.imei);
   }, [imeiNotesMap]);
 
@@ -50,7 +50,7 @@ export function NotesPendingPage({ onBack }: { onBack: () => void }) {
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        <h2 className="text-2xl font-bold mb-4">IMEIs with Notes / Pending</h2>
+        <h2 className="text-2xl font-bold mb-4">IMEIs with Notes</h2>
         <IMEISummaryTable
           summaries={paginatedSummaries}
           totalRecords={filteredSummaries.length}
