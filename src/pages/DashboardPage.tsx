@@ -222,11 +222,8 @@ export function DashboardPage() {
     return <AlertsPage 
       onBack={goBack} 
       onIMEIClick={(imei) => {
-        console.log('Navigating to IMEI detail:', imei);
-        // Set both states in sequence - React 18 will batch them
         setSelectedIMEI(imei);
-        setViewHistory(prev => [...prev, currentView]);
-        setCurrentView('imei-detail');
+        navigateTo('imei-detail');
       }}
       filters={alertsFilters}
       onFiltersChange={setAlertsFilters}
