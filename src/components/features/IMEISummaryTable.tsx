@@ -115,8 +115,7 @@ export function IMEISummaryTable({ summaries, totalRecords, currentPage, totalPa
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredSummaries.map((summary) => (
-                  (() => {
+                filteredSummaries.map((summary) => {
                     const notes = imeiNotesMap.get(summary.imei);
                     let rowColor = "";
                     if (notes?.deactivated) rowColor = "bg-red-100";
@@ -216,7 +215,8 @@ export function IMEISummaryTable({ summaries, totalRecords, currentPage, totalPa
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                    );
+                })
               )}
             </TableBody>
           </Table>
