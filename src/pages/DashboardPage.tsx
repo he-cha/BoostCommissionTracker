@@ -125,8 +125,8 @@ export function DashboardPage() {
   
   const totalPages = Math.ceil(allSummaries.length / ITEMS_PER_PAGE);
   
-  // Memoize alerts
-  const alerts = useMemo(() => getAlerts(), [records, getAlerts]);
+  // Memoize alerts - include imeiNotesMap to recalculate when notes change
+  const alerts = useMemo(() => getAlerts(), [records, imeiNotesMap, getAlerts]);
 
   // Fetch all commission records from backend on mount
   useEffect(() => {
