@@ -222,8 +222,11 @@ export function DashboardPage() {
     return <AlertsPage 
       onBack={goBack} 
       onIMEIClick={(imei) => {
+        console.log('Navigating to IMEI detail:', imei);
+        // Set both states in sequence - React 18 will batch them
         setSelectedIMEI(imei);
-        navigateTo('imei-detail');
+        setViewHistory(prev => [...prev, currentView]);
+        setCurrentView('imei-detail');
       }}
       filters={alertsFilters}
       onFiltersChange={setAlertsFilters}
@@ -231,6 +234,13 @@ export function DashboardPage() {
   }
 
   if (currentView === 'imei-detail') {
+    // Safety check: if no IMEI is selected, go back to dashboard
+    if (!selectedIMEI || selectedIMEI.trim() === '') {
+      console.error('No IMEI selected for detail view');
+      setCurrentView('dashboard');
+      return null;
+    }
+    
     return (
       <IMEIDetailPage
         imei={selectedIMEI}
