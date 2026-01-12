@@ -25,15 +25,12 @@ import { Input } from '../components/ui/input';
 
 type View = 'dashboard' | 'alerts' | 'imei-detail' | 'edit-payment' | 'suspended' | 'deactivated' | 'blacklist' | 'byod' | 'notes';
 
-type ViewHistoryEntry = {
-  view: View;
-  tab?: string;
-};
+
 
 export function DashboardPage() {
   // ALL STATE AND HOOKS MUST BE AT THE TOP
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [viewHistory, setViewHistory] = useState<ViewHistoryEntry[]>([]);
+  const [viewHistory, setViewHistory] = useState<View[]>([]);
   const [selectedIMEI, setSelectedIMEI] = useState<string>('');
   const [selectedRecordId, setSelectedRecordId] = useState<string>('');
   const [filters, setFilters] = useState<any>({});
@@ -149,24 +146,31 @@ export function DashboardPage() {
   }, [setRecords]);
 
   // Navigation helpers
-  const navigateTo = useCallback((view: View) => {
-    setViewHistory(prev => [...prev, { view: currentView, tab: currentView === 'dashboard' ? activeTab : undefined }]);
+  const navigateTo = useCallback((view: View, fromTab?: string) => {
+    setViewHistory(prev => [...prev, currentView]);
+    if (fromTab) {
+      // Store the tab we're navigating from
+      sessionStorage.setItem('lastActiveTab', fromTab);
+    }
     setCurrentView(view);
-  }, [currentView, activeTab]);
+  }, [currentView]);
 
   const goBack = useCallback(() => {
     if (viewHistory.length === 0) {
       setCurrentView('dashboard');
-      setActiveTab('summary');
       return;
     }
-    const lastEntry = viewHistory[viewHistory.length - 1];
+    const lastView = viewHistory[viewHistory.length - 1];
     setViewHistory(prev => prev.slice(0, -1));
-    setCurrentView(lastEntry.view);
+    setCurrentView(lastView);
     
-    // Restore the tab if returning to dashboard
-    if (lastEntry.view === 'dashboard' && lastEntry.tab) {
-      setActiveTab(lastEntry.tab);
+    // If returning to dashboard, restore the tab we were on
+    if (lastView === 'dashboard') {
+      const lastTab = sessionStorage.getItem('lastActiveTab');
+      if (lastTab) {
+        setActiveTab(lastTab);
+        sessionStorage.removeItem('lastActiveTab');
+      }
     }
   }, [viewHistory]);
   
@@ -448,7 +452,7 @@ export function DashboardPage() {
               alerts={alerts}
               onAlertClick={(imei) => {
                 setSelectedIMEI(imei);
-                navigateTo('imei-detail');
+                navigateTo('imei-detail', 'alerts');
               }}
             />
           </TabsContent>
