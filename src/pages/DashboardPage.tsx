@@ -28,7 +28,7 @@ type View = 'dashboard' | 'alerts' | 'imei-detail' | 'edit-payment' | 'suspended
 
 
 export function DashboardPage() {
-  // Place navigation helpers and conditional views AFTER all state declarations
+  // ALL STATE AND HOOKS MUST BE AT THE TOP
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [viewHistory, setViewHistory] = useState<View[]>([]);
   const [selectedIMEI, setSelectedIMEI] = useState<string>('');
@@ -41,41 +41,8 @@ export function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 25;
 
-  // Navigation helpers
-  const navigateTo = (view: View) => {
-    setViewHistory(prev => [...prev, currentView]);
-    setCurrentView(view);
-  };
-
-  const goBack = useCallback(() => {
-    setViewHistory(prev => {
-      if (prev.length === 0) return prev;
-      const lastView = prev[prev.length - 1];
-      setCurrentView(lastView);
-      return prev.slice(0, -1);
-    });
-  }, [currentView]); // currentView is a dependency because it's used to set the new currentView in the goBack logic
-
-  // ...all hooks and function declarations...
-
-  // Place conditional rendering for custom pages here, after all hooks/functions and before the main return
-  if (currentView === 'notes') {
-    return <NotesPendingPage onBack={goBack} />;
-  }
-  if (currentView === 'suspended') {
-    return <SuspendedIMEIPage onBack={goBack} />;
-  }
-  if (currentView === 'deactivated') {
-    return <DeactivatedIMEIPage onBack={goBack} />;
-  }
-  if (currentView === 'blacklist') {
-    return <BlacklistPage onBack={goBack} />;
-  }
-  if (currentView === 'byod') {
-    return <BYODPage onBack={goBack} />;
-  }
-
-  // Counts for metric cards
+  // Store hooks
+  const { records, getMetrics, getIMEISummaries, getAlerts, setRecords } = useCommissionStore();
   const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
   const imeiNotesArr = useMemo(() => Array.from(imeiNotesMap.values()), [imeiNotesMap]);
   const notesCount = imeiNotesArr.filter(n => n.notes && n.notes.trim() !== '').length;
@@ -84,26 +51,7 @@ export function DashboardPage() {
   const blacklistCount = imeiNotesArr.filter(n => n.blacklisted).length;
   const byodCount = imeiNotesArr.filter(n => n.byodSwap).length;
   
-  const { records, getMetrics, getIMEISummaries, getAlerts, setRecords } = useCommissionStore();
-  
-  // Fetch all commission records from backend on mount
-  useEffect(() => {
-    const fetchRecords = async () => {
-      try {
-        const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error('Failed to fetch commission records');
-        const data = await response.json();
-        setRecords(data);
-      } catch (err) {
-        // Optionally log or show error
-        console.error('Error loading commission records:', err);
-      }
-    };
-    fetchRecords();
-  }, [setRecords]); // setRecords is a dependency because it's used inside useEffect
-  
-  // Memoize stores to avoid recalculation
+  // Memoize stores
   const stores = useMemo(
     () => Array.from(new Set(records.map(r => r.store).filter(Boolean))),
     [records]
@@ -119,7 +67,7 @@ export function DashboardPage() {
   }, [dashboardStartDate, dashboardEndDate, dashboardStore, categoryFilter]);
   
   // Memoize metrics calculation
-  const metrics = useMemo(() => getMetrics(metricsFilters), [metricsFilters, records, getMetrics]); // getMetrics is a dependency
+  const metrics = useMemo(() => getMetrics(metricsFilters), [metricsFilters, records, getMetrics]);
   
   // Memoize summary filters
   const summaryFilters = useMemo(() => {
@@ -129,7 +77,7 @@ export function DashboardPage() {
   }, [filters, categoryFilter]);
   
   // Memoize summaries calculation
-  const allSummaries = useMemo(() => getIMEISummaries(summaryFilters), [summaryFilters, records, getIMEISummaries]); // getIMEISummaries is a dependency
+  const allSummaries = useMemo(() => getIMEISummaries(summaryFilters), [summaryFilters, records, getIMEISummaries]);
   
   // Paginate summaries
   const paginatedSummaries = useMemo(() => {
@@ -141,13 +89,62 @@ export function DashboardPage() {
   const totalPages = Math.ceil(allSummaries.length / ITEMS_PER_PAGE);
   
   // Memoize alerts
-  const alerts = useMemo(() => getAlerts(), [records, getAlerts]); // getAlerts is a dependency
+  const alerts = useMemo(() => getAlerts(), [records, getAlerts]);
+
+  // Fetch all commission records from backend on mount
+  useEffect(() => {
+    const fetchRecords = async () => {
+      try {
+        const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error('Failed to fetch commission records');
+        const data = await response.json();
+        setRecords(data);
+      } catch (err) {
+        // Optionally log or show error
+        console.error('Error loading commission records:', err);
+      }
+    };
+    fetchRecords();
+  }, [setRecords]);
+
+  // Navigation helpers
+  const navigateTo = (view: View) => {
+    setViewHistory(prev => [...prev, currentView]);
+    setCurrentView(view);
+  };
+
+  const goBack = useCallback(() => {
+    setViewHistory(prev => {
+      if (prev.length === 0) return prev;
+      const lastView = prev[prev.length - 1];
+      setCurrentView(lastView);
+      return prev.slice(0, -1);
+    });
+  }, []);
   
   // Reset to page 1 when filters change
   const handleFilterChange = useCallback((newFilters: any) => {
     setFilters(newFilters);
     setCurrentPage(1);
-  }, []); // No dependencies for setFilters and setCurrentPage as they are state setters
+  }, []);
+
+  // CONDITIONAL RENDERS - AFTER ALL HOOKS
+  if (currentView === 'notes') {
+    return <NotesPendingPage onBack={goBack} />;
+  }
+  if (currentView === 'suspended') {
+    return <SuspendedIMEIPage onBack={goBack} />;
+  }
+  if (currentView === 'deactivated') {
+    return <DeactivatedIMEIPage onBack={goBack} />;
+  }
+  if (currentView === 'blacklist') {
+    return <BlacklistPage onBack={goBack} />;
+  }
+  if (currentView === 'byod') {
+    return <BYODPage onBack={goBack} />;
+  }
 
   if (currentView === 'alerts') {
     return <AlertsPage onBack={goBack} />;
