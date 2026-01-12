@@ -1,15 +1,47 @@
-import { useMemo, useState } from 'react';
+
+import { useState, useMemo } from 'react';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/button';
-import { useCommissionStore } from '../stores/commissionStore';
 import { ArrowLeft } from 'lucide-react';
-import { IMEIStatusTable } from '../components/features/IMEIStatusTable';
+import { IMEISummaryTable } from '../components/features/IMEISummaryTable';
+import { useCommissionStore } from '../stores/commissionStore';
+
+const ITEMS_PER_PAGE = 25;
 
 export function NotesPendingPage({ onBack }: { onBack: () => void }) {
   const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
-  const imeiNotes = useMemo(() => Array.from(imeiNotesMap.values()), [imeiNotesMap]);
-  // Only IMEIs with missing or non-empty notes
-  const notesList = imeiNotes.filter(n => !n.notes || n.notes.trim() !== '');
+  const getIMEISummaries = useCommissionStore((state) => state.getIMEISummaries);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIMEI, setSelectedIMEI] = useState<string | null>(null);
+
+  // Find IMEIs with missing or non-empty notes
+  const notesIMEIs = useMemo(() => {
+    return Array.from(imeiNotesMap.values())
+      .filter(n => !n.notes || n.notes.trim() !== '')
+      .map(n => n.imei);
+  }, [imeiNotesMap]);
+
+  // Get all summaries and filter to those IMEIs
+  const allSummaries = useMemo(() => getIMEISummaries(), [getIMEISummaries]);
+  const filteredSummaries = useMemo(
+    () => allSummaries.filter(s => notesIMEIs.includes(s.imei)),
+    [allSummaries, notesIMEIs]
+  );
+
+  // Pagination
+  const paginatedSummaries = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredSummaries.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredSummaries, currentPage]);
+  const totalPages = Math.ceil(filteredSummaries.length / ITEMS_PER_PAGE) || 1;
+
+  // Navigation to IMEI detail
+  if (selectedIMEI) {
+    // Lazy-load IMEIDetailPage to avoid circular import
+    const IMEIDetailPage = require('./IMEIDetailPage').IMEIDetailPage;
+    return <IMEIDetailPage imei={selectedIMEI} onBack={() => setSelectedIMEI(null)} onEdit={() => {}} />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -18,7 +50,15 @@ export function NotesPendingPage({ onBack }: { onBack: () => void }) {
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        <IMEIStatusTable notesList={notesList} type="notes" />
+        <h2 className="text-2xl font-bold mb-4">IMEIs with Notes / Pending</h2>
+        <IMEISummaryTable
+          summaries={paginatedSummaries}
+          totalRecords={filteredSummaries.length}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          onIMEIClick={setSelectedIMEI}
+        />
       </main>
     </div>
   );

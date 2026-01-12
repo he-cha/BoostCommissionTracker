@@ -23,17 +23,9 @@ import { Input } from '../components/ui/input';
 type View = 'dashboard' | 'alerts' | 'imei-detail' | 'edit-payment' | 'suspended-deactivated' | 'notes-pending';
 
 
+
 export function DashboardPage() {
-    // Suspended/Deactivated counts
-    const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
-    const imeiNotesArr = useMemo(() => Array.from(imeiNotesMap.values()), [imeiNotesMap]);
-    const suspendedCount = imeiNotesArr.filter(n => n.suspended).length;
-    const deactivatedCount = imeiNotesArr.filter(n => n.deactivated).length;
-
-    // ...existing code...
-
-    // Place navigation helpers and conditional views AFTER all state declarations
-
+  // Place navigation helpers and conditional views AFTER all state declarations
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [viewHistory, setViewHistory] = useState<View[]>([]);
   const [selectedIMEI, setSelectedIMEI] = useState<string>('');
@@ -45,6 +37,26 @@ export function DashboardPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 25;
+
+  // Conditional rendering for custom pages
+  if (currentView === 'notes-pending') {
+    return <NotesPendingPage onBack={() => {
+      setCurrentView('dashboard');
+      setViewHistory([]);
+    }} />;
+  }
+  if (currentView === 'suspended-deactivated') {
+    return <SuspendedDeactivatedPage onBack={() => {
+      setCurrentView('dashboard');
+      setViewHistory([]);
+    }} />;
+  }
+
+  // Suspended/Deactivated counts
+  const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
+  const imeiNotesArr = useMemo(() => Array.from(imeiNotesMap.values()), [imeiNotesMap]);
+  const suspendedCount = imeiNotesArr.filter(n => n.suspended).length;
+  const deactivatedCount = imeiNotesArr.filter(n => n.deactivated).length;
   
   const { records, getMetrics, getIMEISummaries, getAlerts, setRecords } = useCommissionStore();
   
@@ -285,14 +297,20 @@ export function DashboardPage() {
             <TabsTrigger value="upload">Upload CSV</TabsTrigger>
             <button
               className="ml-2 px-3 py-1 rounded bg-muted text-foreground border border-border hover:bg-accent transition"
-              onClick={() => navigateTo('notes-pending')}
+              onClick={() => {
+                setViewHistory([currentView]);
+                setCurrentView('notes-pending');
+              }}
               type="button"
             >
               Notes/Pending
             </button>
             <button
               className="ml-2 px-3 py-1 rounded bg-muted text-foreground border border-border hover:bg-accent transition"
-              onClick={() => navigateTo('suspended-deactivated')}
+              onClick={() => {
+                setViewHistory([currentView]);
+                setCurrentView('suspended-deactivated');
+              }}
               type="button"
             >
               Deactivated/Suspended
