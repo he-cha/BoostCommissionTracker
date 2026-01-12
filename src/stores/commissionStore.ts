@@ -149,8 +149,8 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       
       newNotes.set(imei, updatedNotes);
       
-      // If IMEI is marked as suspended, deactivated, or blacklisted, deactivate all its records
-      const shouldDeactivate = updatedNotes.suspended || updatedNotes.deactivated || updatedNotes.blacklisted;
+      // If IMEI is marked as suspended, deactivated, blacklisted, or BYOD, deactivate all its records
+      const shouldDeactivate = updatedNotes.suspended || updatedNotes.deactivated || updatedNotes.blacklisted || updatedNotes.byodSwap;
       
       if (shouldDeactivate) {
         const updatedRecords = state.records.map(r => 
@@ -474,8 +474,8 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     summaries.forEach(summary => {
       const notes = imeiNotes.get(summary.imei);
       
-      // Skip IMEIs that are suspended, deactivated, blacklisted, or have notes
-      if (notes?.suspended || notes?.deactivated || notes?.blacklisted || (notes?.notes && notes.notes.trim() !== '')) {
+      // Skip IMEIs that are suspended, deactivated, blacklisted, BYOD, or have notes
+      if (notes?.suspended || notes?.deactivated || notes?.blacklisted || notes?.byodSwap || (notes?.notes && notes.notes.trim() !== '')) {
         return;
       }
       
