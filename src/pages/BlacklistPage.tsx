@@ -10,20 +10,36 @@ import { ArrowLeft, Search, Filter, X } from 'lucide-react';
 import { useCommissionStore } from '../stores/commissionStore';
 import { formatCurrency, formatDate } from '../lib/utils';
 
+interface BlacklistFilters {
+  searchTerm: string;
+  storeFilter: string;
+  startDate: string;
+  endDate: string;
+  statusFilter: string;
+}
+
 interface BlacklistPageProps {
   onBack: () => void;
   onIMEIClick: (imei: string) => void;
+  filters: BlacklistFilters;
+  onFiltersChange: (filters: BlacklistFilters) => void;
 }
 
-export function BlacklistPage({ onBack, onIMEIClick }: BlacklistPageProps) {
+export function BlacklistPage({ onBack, onIMEIClick, filters, onFiltersChange }: BlacklistPageProps) {
   const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
   const getIMEISummaries = useCommissionStore((state) => state.getIMEISummaries);
   const records = useCommissionStore((state) => state.records);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [storeFilter, setStoreFilter] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  
+  const searchTerm = filters.searchTerm;
+  const setSearchTerm = (value: string) => onFiltersChange({ ...filters, searchTerm: value });
+  const storeFilter = filters.storeFilter;
+  const setStoreFilter = (value: string) => onFiltersChange({ ...filters, storeFilter: value });
+  const startDate = filters.startDate;
+  const setStartDate = (value: string) => onFiltersChange({ ...filters, startDate: value });
+  const endDate = filters.endDate;
+  const setEndDate = (value: string) => onFiltersChange({ ...filters, endDate: value });
+  const statusFilter = filters.statusFilter;
+  const setStatusFilter = (value: string) => onFiltersChange({ ...filters, statusFilter: value });
 
   const stores = useMemo(
     () => Array.from(new Set(records.map(r => r.store).filter(Boolean))),
@@ -87,11 +103,13 @@ export function BlacklistPage({ onBack, onIMEIClick }: BlacklistPageProps) {
   }, [blacklistedSummaries, searchTerm, storeFilter, startDate, endDate, statusFilter, imeiNotesMap]);
 
   const clearFilters = () => {
-    setSearchTerm('');
-    setStoreFilter('');
-    setStartDate('');
-    setEndDate('');
-    setStatusFilter('');
+    onFiltersChange({
+      searchTerm: '',
+      storeFilter: '',
+      startDate: '',
+      endDate: '',
+      statusFilter: '',
+    });
   };
 
   const hasActiveFilters = searchTerm || storeFilter || startDate || endDate || statusFilter;

@@ -10,20 +10,36 @@ import { ArrowLeft, Search, Filter, X } from 'lucide-react';
 import { useCommissionStore } from '../stores/commissionStore';
 import { formatCurrency, formatDate } from '../lib/utils';
 
+interface BYODFilters {
+  searchTerm: string;
+  storeFilter: string;
+  saleTypeFilter: string;
+  startDate: string;
+  endDate: string;
+}
+
 interface BYODPageProps {
   onBack: () => void;
   onIMEIClick: (imei: string) => void;
+  filters: BYODFilters;
+  onFiltersChange: (filters: BYODFilters) => void;
 }
 
-export function BYODPage({ onBack, onIMEIClick }: BYODPageProps) {
+export function BYODPage({ onBack, onIMEIClick, filters, onFiltersChange }: BYODPageProps) {
   const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
   const getIMEISummaries = useCommissionStore((state) => state.getIMEISummaries);
   const records = useCommissionStore((state) => state.records);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [storeFilter, setStoreFilter] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [saleTypeFilter, setSaleTypeFilter] = useState<string>('');
+  
+  const searchTerm = filters.searchTerm;
+  const setSearchTerm = (value: string) => onFiltersChange({ ...filters, searchTerm: value });
+  const storeFilter = filters.storeFilter;
+  const setStoreFilter = (value: string) => onFiltersChange({ ...filters, storeFilter: value });
+  const saleTypeFilter = filters.saleTypeFilter;
+  const setSaleTypeFilter = (value: string) => onFiltersChange({ ...filters, saleTypeFilter: value });
+  const startDate = filters.startDate;
+  const setStartDate = (value: string) => onFiltersChange({ ...filters, startDate: value });
+  const endDate = filters.endDate;
+  const setEndDate = (value: string) => onFiltersChange({ ...filters, endDate: value });
 
   const stores = useMemo(
     () => Array.from(new Set(records.map(r => r.store).filter(Boolean))),
@@ -77,11 +93,13 @@ export function BYODPage({ onBack, onIMEIClick }: BYODPageProps) {
   }, [byodSummaries, searchTerm, storeFilter, saleTypeFilter, startDate, endDate]);
 
   const clearFilters = () => {
-    setSearchTerm('');
-    setStoreFilter('');
-    setSaleTypeFilter('');
-    setStartDate('');
-    setEndDate('');
+    onFiltersChange({
+      searchTerm: '',
+      storeFilter: '',
+      saleTypeFilter: '',
+      startDate: '',
+      endDate: '',
+    });
   };
 
   const hasActiveFilters = searchTerm || storeFilter || saleTypeFilter || startDate || endDate;

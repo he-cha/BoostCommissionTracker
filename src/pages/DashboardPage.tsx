@@ -41,6 +41,42 @@ export function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 25;
 
+  // Filter states for each page view (preserved across navigation)
+  const [alertsFilters, setAlertsFilters] = useState({
+    filterType: '',
+    filterSeverity: '',
+    filterStore: '',
+    searchIMEI: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [suspendedFilters, setSuspendedFilters] = useState({
+    searchTerm: '',
+    storeFilter: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [deactivatedFilters, setDeactivatedFilters] = useState({
+    searchTerm: '',
+    storeFilter: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [blacklistFilters, setBlacklistFilters] = useState({
+    searchTerm: '',
+    storeFilter: '',
+    startDate: '',
+    endDate: '',
+    statusFilter: '',
+  });
+  const [byodFilters, setByodFilters] = useState({
+    searchTerm: '',
+    storeFilter: '',
+    saleTypeFilter: '',
+    startDate: '',
+    endDate: '',
+  });
+
   // Store hooks
   const { records, getMetrics, getIMEISummaries, getAlerts, setRecords } = useCommissionStore();
   const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
@@ -138,35 +174,60 @@ export function DashboardPage() {
     }} />;
   }
   if (currentView === 'suspended') {
-    return <SuspendedIMEIPage onBack={goBack} onIMEIClick={(imei) => {
-      setSelectedIMEI(imei);
-      navigateTo('imei-detail');
-    }} />;
+    return <SuspendedIMEIPage 
+      onBack={goBack} 
+      onIMEIClick={(imei) => {
+        setSelectedIMEI(imei);
+        navigateTo('imei-detail');
+      }}
+      filters={suspendedFilters}
+      onFiltersChange={setSuspendedFilters}
+    />;
   }
   if (currentView === 'deactivated') {
-    return <DeactivatedIMEIPage onBack={goBack} onIMEIClick={(imei) => {
-      setSelectedIMEI(imei);
-      navigateTo('imei-detail');
-    }} />;
+    return <DeactivatedIMEIPage 
+      onBack={goBack} 
+      onIMEIClick={(imei) => {
+        setSelectedIMEI(imei);
+        navigateTo('imei-detail');
+      }}
+      filters={deactivatedFilters}
+      onFiltersChange={setDeactivatedFilters}
+    />;
   }
   if (currentView === 'blacklist') {
-    return <BlacklistPage onBack={goBack} onIMEIClick={(imei) => {
-      setSelectedIMEI(imei);
-      navigateTo('imei-detail');
-    }} />;
+    return <BlacklistPage 
+      onBack={goBack} 
+      onIMEIClick={(imei) => {
+        setSelectedIMEI(imei);
+        navigateTo('imei-detail');
+      }}
+      filters={blacklistFilters}
+      onFiltersChange={setBlacklistFilters}
+    />;
   }
   if (currentView === 'byod') {
-    return <BYODPage onBack={goBack} onIMEIClick={(imei) => {
-      setSelectedIMEI(imei);
-      navigateTo('imei-detail');
-    }} />;
+    return <BYODPage 
+      onBack={goBack} 
+      onIMEIClick={(imei) => {
+        setSelectedIMEI(imei);
+        navigateTo('imei-detail');
+      }}
+      filters={byodFilters}
+      onFiltersChange={setByodFilters}
+    />;
   }
 
   if (currentView === 'alerts') {
-    return <AlertsPage onBack={goBack} onIMEIClick={(imei) => {
-      setSelectedIMEI(imei);
-      navigateTo('imei-detail');
-    }} />;
+    return <AlertsPage 
+      onBack={goBack} 
+      onIMEIClick={(imei) => {
+        setSelectedIMEI(imei);
+        navigateTo('imei-detail');
+      }}
+      filters={alertsFilters}
+      onFiltersChange={setAlertsFilters}
+    />;
   }
 
   if (currentView === 'imei-detail') {

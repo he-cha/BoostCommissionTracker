@@ -10,19 +10,33 @@ import { useCommissionStore } from '../stores/commissionStore';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { Badge } from '../components/ui/badge';
 
+interface DeactivatedFilters {
+  searchTerm: string;
+  storeFilter: string;
+  startDate: string;
+  endDate: string;
+}
+
 interface DeactivatedIMEIPageProps {
   onBack: () => void;
   onIMEIClick: (imei: string) => void;
+  filters: DeactivatedFilters;
+  onFiltersChange: (filters: DeactivatedFilters) => void;
 }
 
-export function DeactivatedIMEIPage({ onBack, onIMEIClick }: DeactivatedIMEIPageProps) {
+export function DeactivatedIMEIPage({ onBack, onIMEIClick, filters, onFiltersChange }: DeactivatedIMEIPageProps) {
   const imeiNotesMap = useCommissionStore((state) => state.imeiNotes);
   const getIMEISummaries = useCommissionStore((state) => state.getIMEISummaries);
   const records = useCommissionStore((state) => state.records);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [storeFilter, setStoreFilter] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  
+  const searchTerm = filters.searchTerm;
+  const setSearchTerm = (value: string) => onFiltersChange({ ...filters, searchTerm: value });
+  const storeFilter = filters.storeFilter;
+  const setStoreFilter = (value: string) => onFiltersChange({ ...filters, storeFilter: value });
+  const startDate = filters.startDate;
+  const setStartDate = (value: string) => onFiltersChange({ ...filters, startDate: value });
+  const endDate = filters.endDate;
+  const setEndDate = (value: string) => onFiltersChange({ ...filters, endDate: value });
 
   const stores = useMemo(
     () => Array.from(new Set(records.map(r => r.store).filter(Boolean))),
@@ -73,10 +87,12 @@ export function DeactivatedIMEIPage({ onBack, onIMEIClick }: DeactivatedIMEIPage
   }, [deactivatedSummaries, searchTerm, storeFilter, startDate, endDate, imeiNotesMap]);
 
   const clearFilters = () => {
-    setSearchTerm('');
-    setStoreFilter('');
-    setStartDate('');
-    setEndDate('');
+    onFiltersChange({
+      searchTerm: '',
+      storeFilter: '',
+      startDate: '',
+      endDate: '',
+    });
   };
 
   const hasActiveFilters = searchTerm || storeFilter || startDate || endDate;

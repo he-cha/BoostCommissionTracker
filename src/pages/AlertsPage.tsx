@@ -5,12 +5,23 @@ import { useCommissionStore } from '../stores/commissionStore';
 import { Button } from '../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
+interface AlertsPageFilters {
+  filterType: string;
+  filterSeverity: string;
+  filterStore: string;
+  searchIMEI: string;
+  startDate: string;
+  endDate: string;
+}
+
 interface AlertsPageProps {
   onBack: () => void;
   onIMEIClick: (imei: string) => void;
+  filters: AlertsPageFilters;
+  onFiltersChange: (filters: AlertsPageFilters) => void;
 }
 
-export function AlertsPage({ onBack, onIMEIClick }: AlertsPageProps) {
+export function AlertsPage({ onBack, onIMEIClick, filters, onFiltersChange }: AlertsPageProps) {
   const alerts = useCommissionStore((state) => state.getAlerts());
 
   return (
@@ -28,7 +39,12 @@ export function AlertsPage({ onBack, onIMEIClick }: AlertsPageProps) {
           </p>
         </div>
 
-        <AlertsPanel alerts={alerts} onAlertClick={onIMEIClick} />
+        <AlertsPanel 
+          alerts={alerts} 
+          onAlertClick={onIMEIClick}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        />
       </main>
     </div>
   );

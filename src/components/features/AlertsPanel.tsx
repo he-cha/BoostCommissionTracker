@@ -11,19 +11,50 @@ import { AlertTriangle, AlertCircle, XCircle, DollarSign, Filter, X, Search } fr
 import { cn } from '../../lib/utils';
 import { useCommissionStore } from '../../stores/commissionStore';
 
+interface AlertsPageFilters {
+  filterType: string;
+  filterSeverity: string;
+  filterStore: string;
+  searchIMEI: string;
+  startDate: string;
+  endDate: string;
+}
+
 interface AlertsPanelProps {
   alerts: Alert[];
   onAlertClick?: (imei: string) => void;
+  filters?: AlertsPageFilters;
+  onFiltersChange?: (filters: AlertsPageFilters) => void;
 }
 
-export function AlertsPanel({ alerts, onAlertClick }: AlertsPanelProps) {
+export function AlertsPanel({ alerts, onAlertClick, filters: externalFilters, onFiltersChange }: AlertsPanelProps) {
   const records = useCommissionStore((state) => state.records);
-  const [filterType, setFilterType] = useState<string>('');
-  const [filterSeverity, setFilterSeverity] = useState<string>('');
-  const [filterStore, setFilterStore] = useState<string>('');
-  const [searchIMEI, setSearchIMEI] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  
+  // Use external filters if provided, otherwise use local state
+  const [internalFilters, setInternalFilters] = useState({
+    filterType: '',
+    filterSeverity: '',
+    filterStore: '',
+    searchIMEI: '',
+    startDate: '',
+    endDate: '',
+  });
+  
+  const activeFilters = externalFilters || internalFilters;
+  const updateFilters = onFiltersChange || setInternalFilters;
+  
+  const filterType = activeFilters.filterType;
+  const setFilterType = (value: string) => updateFilters({ ...activeFilters, filterType: value });
+  const filterSeverity = activeFilters.filterSeverity;
+  const setFilterSeverity = (value: string) => updateFilters({ ...activeFilters, filterSeverity: value });
+  const filterStore = activeFilters.filterStore;
+  const setFilterStore = (value: string) => updateFilters({ ...activeFilters, filterStore: value });
+  const searchIMEI = activeFilters.searchIMEI;
+  const setSearchIMEI = (value: string) => updateFilters({ ...activeFilters, searchIMEI: value });
+  const startDate = activeFilters.startDate;
+  const setStartDate = (value: string) => updateFilters({ ...activeFilters, startDate: value });
+  const endDate = activeFilters.endDate;
+  const setEndDate = (value: string) => updateFilters({ ...activeFilters, endDate: value });
 
   const stores = Array.from(new Set(records.map(r => r.store).filter(Boolean)));
 
@@ -62,12 +93,14 @@ export function AlertsPanel({ alerts, onAlertClick }: AlertsPanelProps) {
   }, [alerts, filterType, filterSeverity, filterStore, searchIMEI, startDate, endDate, records]);
 
   const clearFilters = () => {
-    setFilterType('');
-    setFilterSeverity('');
-    setFilterStore('');
-    setSearchIMEI('');
-    setStartDate('');
-    setEndDate('');
+    updateFilters({
+      filterType: '',
+      filterSeverity: '',
+      filterStore: '',
+      searchIMEI: '',
+      startDate: '',
+      endDate: '',
+    });
   };
 
   const hasActiveFilters = filterType || filterSeverity || filterStore || searchIMEI || startDate || endDate;
