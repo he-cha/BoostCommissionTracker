@@ -454,6 +454,8 @@ export function DashboardPage() {
                 setSelectedIMEI(imei);
                 navigateTo('imei-detail', 'alerts');
               }}
+              filters={alertsFilters}
+              onFiltersChange={setAlertsFilters}
             />
           </TabsContent>
 
