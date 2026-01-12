@@ -7,9 +7,10 @@ import { ArrowLeft } from 'lucide-react';
 
 interface AlertsPageProps {
   onBack: () => void;
+  onIMEIClick: (imei: string) => void;
 }
 
-export function AlertsPage({ onBack }: AlertsPageProps) {
+export function AlertsPage({ onBack, onIMEIClick }: AlertsPageProps) {
   const alerts = useCommissionStore((state) => state.getAlerts());
 
   return (
@@ -27,7 +28,7 @@ export function AlertsPage({ onBack }: AlertsPageProps) {
           </p>
         </div>
 
-        <AlertsPanel alerts={alerts} />
+        <AlertsPanel alerts={alerts} onAlertClick={onIMEIClick} />
       </main>
     </div>
   );

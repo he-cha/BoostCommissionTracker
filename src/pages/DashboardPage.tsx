@@ -163,7 +163,10 @@ export function DashboardPage() {
   }
 
   if (currentView === 'alerts') {
-    return <AlertsPage onBack={goBack} />;
+    return <AlertsPage onBack={goBack} onIMEIClick={(imei) => {
+      setSelectedIMEI(imei);
+      navigateTo('imei-detail');
+    }} />;
   }
 
   if (currentView === 'imei-detail') {
@@ -367,7 +370,7 @@ export function DashboardPage() {
               alerts={alerts}
               onAlertClick={(imei) => {
                 setSelectedIMEI(imei);
-                setCurrentView('imei-detail');
+                navigateTo('imei-detail');
               }}
             />
           </TabsContent>
