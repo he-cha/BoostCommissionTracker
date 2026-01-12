@@ -38,22 +38,22 @@ export function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 25;
 
-
-
-
-
-  // ...all hooks and function declarations above...
-
   // Navigation helpers
+  const navigateTo = (view: View) => {
+    setViewHistory(prev => [...prev, currentView]);
+    setCurrentView(view);
+  };
 
-
-  // ...rest of hooks and logic...
-
+  const goBack = useCallback(() => {
+    setViewHistory(prev => {
+      if (prev.length === 0) return prev;
+      const lastView = prev[prev.length - 1];
+      setCurrentView(lastView);
+      return prev.slice(0, -1);
+    });
+  }, [currentView]); // currentView is a dependency because it's used to set the new currentView in the goBack logic
 
   // ...all hooks and function declarations...
-
-  // Navigation helpers
-
 
   // Place conditional rendering for custom pages here, after all hooks/functions and before the main return
   if (currentView === 'notes-pending') {
@@ -86,9 +86,7 @@ export function DashboardPage() {
       }
     };
     fetchRecords();
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setRecords]); // setRecords is a dependency because it's used inside useEffect
   
   // Memoize stores to avoid recalculation
   const stores = useMemo(
@@ -106,7 +104,7 @@ export function DashboardPage() {
   }, [dashboardStartDate, dashboardEndDate, dashboardStore, categoryFilter]);
   
   // Memoize metrics calculation
-  const metrics = useMemo(() => getMetrics(metricsFilters), [metricsFilters, records]);
+  const metrics = useMemo(() => getMetrics(metricsFilters), [metricsFilters, records, getMetrics]); // getMetrics is a dependency
   
   // Memoize summary filters
   const summaryFilters = useMemo(() => {
@@ -116,7 +114,7 @@ export function DashboardPage() {
   }, [filters, categoryFilter]);
   
   // Memoize summaries calculation
-  const allSummaries = useMemo(() => getIMEISummaries(summaryFilters), [summaryFilters, records]);
+  const allSummaries = useMemo(() => getIMEISummaries(summaryFilters), [summaryFilters, records, getIMEISummaries]); // getIMEISummaries is a dependency
   
   // Paginate summaries
   const paginatedSummaries = useMemo(() => {
@@ -128,28 +126,13 @@ export function DashboardPage() {
   const totalPages = Math.ceil(allSummaries.length / ITEMS_PER_PAGE);
   
   // Memoize alerts
-  const alerts = useMemo(() => getAlerts(), [records]);
+  const alerts = useMemo(() => getAlerts(), [records, getAlerts]); // getAlerts is a dependency
   
   // Reset to page 1 when filters change
   const handleFilterChange = useCallback((newFilters: any) => {
     setFilters(newFilters);
     setCurrentPage(1);
-  }, []);
-
-  // Navigation helpers
-  const navigateTo = (view: View) => {
-    setViewHistory(prev => [...prev, currentView]);
-    setCurrentView(view);
-  };
-
-  const goBack = () => {
-    setViewHistory(prev => {
-      if (prev.length === 0) return prev;
-      const lastView = prev[prev.length - 1];
-      setCurrentView(lastView);
-      return prev.slice(0, -1);
-    });
-  };
+  }, []); // No dependencies for setFilters and setCurrentPage as they are state setters
 
   if (currentView === 'alerts') {
     return <AlertsPage onBack={goBack} />;
@@ -234,10 +217,10 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                           <MetricsCard
                             title="IMEI Notes/Pending"
-                            value={imeiNotesArr.filter(n => !n.notes).length.toString()}
+                            value={imeiNotesArr.filter(n => !n.notes || n.notes.trim() === '').length.toString()}
                             icon={AlertTriangle}
-                            trend={imeiNotesArr.filter(n => !n.notes).length > 0 ? 'negative' : 'positive'}
-                            badge={imeiNotesArr.filter(n => !n.notes).length}
+                            trend={imeiNotesArr.filter(n => !n.notes || n.notes.trim() === '').length > 0 ? 'negative' : 'positive'}
+                            badge={imeiNotesArr.filter(n => !n.notes || n.notes.trim() === '').length}
                             clickable
                             onClick={() => navigateTo('notes-pending')}
                           />

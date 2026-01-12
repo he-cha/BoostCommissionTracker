@@ -14,10 +14,10 @@ export function NotesPendingPage({ onBack }: { onBack: () => void }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIMEI, setSelectedIMEI] = useState<string | null>(null);
 
-  // Find IMEIs with missing or non-empty notes
+  // Find IMEIs with missing or empty notes (pending state)
   const notesIMEIs = useMemo(() => {
     return Array.from(imeiNotesMap.values())
-      .filter(n => !n.notes || n.notes.trim() !== '')
+      .filter(n => !n.notes || n.notes.trim() === '')
       .map(n => n.imei);
   }, [imeiNotesMap]);
 
