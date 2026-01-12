@@ -370,8 +370,7 @@ export function DashboardPage() {
               alerts={alerts}
               onAlertClick={(imei) => {
                 setSelectedIMEI(imei);
-                navigateTo('alerts');
-                // Will navigate to imei-detail from AlertsPage
+                navigateTo('imei-detail');
               }}
             />
           </TabsContent>
