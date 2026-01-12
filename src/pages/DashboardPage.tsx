@@ -283,6 +283,20 @@ export function DashboardPage() {
               )}
             </TabsTrigger>
             <TabsTrigger value="upload">Upload CSV</TabsTrigger>
+            <button
+              className="ml-2 px-3 py-1 rounded bg-muted text-foreground border border-border hover:bg-accent transition"
+              onClick={() => navigateTo('notes-pending')}
+              type="button"
+            >
+              Notes/Pending
+            </button>
+            <button
+              className="ml-2 px-3 py-1 rounded bg-muted text-foreground border border-border hover:bg-accent transition"
+              onClick={() => navigateTo('suspended-deactivated')}
+              type="button"
+            >
+              Deactivated/Suspended
+            </button>
           </TabsList>
 
           <TabsContent value="summary" className="space-y-6">
