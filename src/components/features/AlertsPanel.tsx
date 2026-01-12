@@ -7,6 +7,7 @@ import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
 import { AlertTriangle, AlertCircle, XCircle, DollarSign, Filter, X, Search } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useCommissionStore } from '../../stores/commissionStore';
@@ -29,6 +30,7 @@ interface AlertsPanelProps {
 
 export function AlertsPanel({ alerts, onAlertClick, filters: externalFilters, onFiltersChange }: AlertsPanelProps) {
   const records = useCommissionStore((state) => state.records);
+  const dismissAlert = useCommissionStore((state) => state.dismissAlert);
   
   // Use external filters if provided, otherwise use local state
   const [internalFilters, setInternalFilters] = useState({
@@ -289,6 +291,15 @@ export function AlertsPanel({ alerts, onAlertClick, filters: externalFilters, on
             >
               <CardContent className="pt-4">
                 <div className="flex items-start gap-3">
+                  <Checkbox
+                    id={`alert-${alert.id}`}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        dismissAlert(alert.id);
+                      }
+                    }}
+                    className="mt-1"
+                  />
                   <div className={cn('mt-0.5', getSeverityColor(alert.severity))}>
                     {getAlertIcon(alert.type)}
                   </div>

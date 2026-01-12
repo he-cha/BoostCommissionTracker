@@ -33,7 +33,6 @@ export interface IMEINotes {
   deactivated: boolean;
   blacklisted: boolean;
   byodSwap: boolean;
-  alertsAcknowledged: boolean;
   customerName?: string;
   customerNumber?: string;
   customerEmail?: string;

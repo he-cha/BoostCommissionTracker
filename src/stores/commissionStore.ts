@@ -20,7 +20,7 @@ interface CommissionState {
   getIMEISummaries: (filters?: { dateRange?: [string, string]; store?: string; saleType?: string; category?: string }) => IMEISummary[];
   getAlerts: () => Alert[];
   clearRecords: () => void;
-  updateIMEINotes: (imei: string, notes?: string, suspended?: boolean, deactivated?: boolean, blacklisted?: boolean, byodSwap?: boolean, alertsAcknowledged?: boolean, customerName?: string, customerNumber?: string, customerEmail?: string) => void;
+  updateIMEINotes: (imei: string, notes?: string, suspended?: boolean, deactivated?: boolean, blacklisted?: boolean, byodSwap?: boolean, customerName?: string, customerNumber?: string, customerEmail?: string) => void;
   updateWithholdingResolved: (imei: string, resolved: boolean) => void;
   getIMEINotes: (imei: string) => IMEINotes | undefined;
   addMonthPayment: (imei: string, month: number, amount: number, paymentReceived: boolean, paymentDate?: string) => void;
@@ -122,7 +122,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     set({ records: [] });
   },
   
-  updateIMEINotes: (imei, notes, suspended, deactivated, blacklisted, byodSwap, alertsAcknowledged, customerName, customerNumber, customerEmail) => {
+  updateIMEINotes: (imei, notes, suspended, deactivated, blacklisted, byodSwap, customerName, customerNumber, customerEmail) => {
     set((state) => {
       const newNotes = new Map(state.imeiNotes);
       const existing = newNotes.get(imei) || {
@@ -133,7 +133,6 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
         deactivated: false,
         blacklisted: false,
         byodSwap: false,
-        alertsAcknowledged: false,
       };
       
       const updatedNotes = {
@@ -143,7 +142,6 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
         deactivated: deactivated !== undefined ? deactivated : existing.deactivated,
         blacklisted: blacklisted !== undefined ? blacklisted : existing.blacklisted,
         byodSwap: byodSwap !== undefined ? byodSwap : existing.byodSwap,
-        alertsAcknowledged: alertsAcknowledged !== undefined ? alertsAcknowledged : existing.alertsAcknowledged,
         customerName: customerName !== undefined ? customerName : existing.customerName,
         customerNumber: customerNumber !== undefined ? customerNumber : existing.customerNumber,
         customerEmail: customerEmail !== undefined ? customerEmail : existing.customerEmail,
@@ -176,7 +174,6 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
         deactivated: false,
         blacklisted: false,
         byodSwap: false,
-        alertsAcknowledged: false,
       };
       newNotes.set(imei, { ...existing, withholdingResolved: resolved });
       return { imeiNotes: newNotes };
@@ -477,8 +474,8 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     summaries.forEach(summary => {
       const notes = imeiNotes.get(summary.imei);
       
-      // Skip IMEIs that are suspended, deactivated, blacklisted, have notes, or alerts acknowledged
-      if (notes?.suspended || notes?.deactivated || notes?.blacklisted || (notes?.notes && notes.notes.trim() !== '') || notes?.alertsAcknowledged) {
+      // Skip IMEIs that are suspended, deactivated, blacklisted, or have notes
+      if (notes?.suspended || notes?.deactivated || notes?.blacklisted || (notes?.notes && notes.notes.trim() !== '')) {
         return;
       }
       

@@ -38,7 +38,6 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
   const [deactivated, setDeactivated] = useState(imeiNotes?.deactivated || false);
   const [blacklisted, setBlacklisted] = useState(imeiNotes?.blacklisted || false);
   const [byodSwap, setByodSwap] = useState(imeiNotes?.byodSwap || false);
-  const [alertsAcknowledged, setAlertsAcknowledged] = useState(imeiNotes?.alertsAcknowledged || false);
   const [customerName, setCustomerName] = useState(imeiNotes?.customerName || '');
   const [customerNumber, setCustomerNumber] = useState(imeiNotes?.customerNumber || '');
   const [customerEmail, setCustomerEmail] = useState(imeiNotes?.customerEmail || '');
@@ -70,7 +69,6 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
       deactivated,
       blacklisted,
       byodSwap,
-      alertsAcknowledged,
       customerName,
       customerNumber,
       customerEmail
@@ -534,23 +532,6 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Alert Acknowledgment */}
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <Checkbox 
-                  id="alerts-acknowledged" 
-                  checked={alertsAcknowledged} 
-                  onCheckedChange={(checked) => setAlertsAcknowledged(!!checked)} 
-                />
-                <Label htmlFor="alerts-acknowledged" className="cursor-pointer font-semibold text-base">
-                  Alerts Acknowledged
-                </Label>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 ml-6">
-                Check this to remove all alerts for this IMEI from the alerts page
-              </p>
-            </div>
-
             {/* Status Checkboxes */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center gap-2">
