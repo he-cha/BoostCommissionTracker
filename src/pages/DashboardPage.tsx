@@ -109,19 +109,20 @@ export function DashboardPage() {
   }, [setRecords]);
 
   // Navigation helpers
-  const navigateTo = (view: View) => {
+  const navigateTo = useCallback((view: View) => {
     setViewHistory(prev => [...prev, currentView]);
     setCurrentView(view);
-  };
+  }, [currentView]);
 
   const goBack = useCallback(() => {
-    setViewHistory(prev => {
-      if (prev.length === 0) return prev;
-      const lastView = prev[prev.length - 1];
-      setCurrentView(lastView);
-      return prev.slice(0, -1);
-    });
-  }, []);
+    if (viewHistory.length === 0) {
+      setCurrentView('dashboard');
+      return;
+    }
+    const lastView = viewHistory[viewHistory.length - 1];
+    setViewHistory(prev => prev.slice(0, -1));
+    setCurrentView(lastView);
+  }, [viewHistory]);
   
   // Reset to page 1 when filters change
   const handleFilterChange = useCallback((newFilters: any) => {
