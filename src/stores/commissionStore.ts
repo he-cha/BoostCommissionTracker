@@ -203,6 +203,29 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
 
       if (!response.ok) {
         console.error('Failed to sync IMEI notes to backend:', response.statusText);
+        return;
+      }
+      // Fetch latest notes from backend and update store
+      const fetchNotesUrl = `${import.meta.env.VITE_API_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
+      const notesRes = await fetch(fetchNotesUrl);
+      if (notesRes.ok) {
+        const notesData = await notesRes.json();
+        set((state) => {
+          const newNotes = new Map(state.imeiNotes);
+          newNotes.set(imei, {
+            imei: notesData.imei,
+            notes: notesData.notes || '',
+            suspended: notesData.suspended || false,
+            deactivated: notesData.deactivated || false,
+            blacklisted: notesData.blacklisted || false,
+            byodSwap: notesData.byodSwap || false,
+            customerName: notesData.customerName,
+            customerNumber: notesData.customerNumber,
+            customerEmail: notesData.customerEmail,
+            withholdingResolved: notesData.withholdingResolved || false,
+          });
+          return { imeiNotes: newNotes };
+        });
       }
     } catch (error) {
       console.error('Error syncing IMEI notes to backend:', error);
@@ -237,6 +260,29 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
 
       if (!response.ok) {
         console.error('Failed to sync withholding status to backend:', response.statusText);
+        return;
+      }
+      // Fetch latest notes from backend and update store
+      const fetchNotesUrl = `${import.meta.env.VITE_API_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
+      const notesRes = await fetch(fetchNotesUrl);
+      if (notesRes.ok) {
+        const notesData = await notesRes.json();
+        set((state) => {
+          const newNotes = new Map(state.imeiNotes);
+          newNotes.set(imei, {
+            imei: notesData.imei,
+            notes: notesData.notes || '',
+            suspended: notesData.suspended || false,
+            deactivated: notesData.deactivated || false,
+            blacklisted: notesData.blacklisted || false,
+            byodSwap: notesData.byodSwap || false,
+            customerName: notesData.customerName,
+            customerNumber: notesData.customerNumber,
+            customerEmail: notesData.customerEmail,
+            withholdingResolved: notesData.withholdingResolved || false,
+          });
+          return { imeiNotes: newNotes };
+        });
       }
     } catch (error) {
       console.error('Error syncing withholding status to backend:', error);
