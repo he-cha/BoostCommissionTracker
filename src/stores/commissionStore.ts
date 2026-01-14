@@ -445,7 +445,8 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
   },
   
   getIMEISummaries: (filters) => {
-    let records = get().records.filter(r => r.isActive);
+    // For status pages, include all records, not just isActive
+    let records = get().records;
     
     if (filters?.store && filters.store.trim()) {
       records = records.filter(r => r.store === filters.store);
