@@ -122,7 +122,8 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     set({ records: [] });
   },
   
-  updateIMEINotes: (imei, notes, suspended, deactivated, blacklisted, byodSwap, customerName, customerNumber, customerEmail) => {
+  updateIMEINotes: async (imei, notes, suspended, deactivated, blacklisted, byodSwap, customerName, customerNumber, customerEmail) => {
+    // Update local state first for immediate UI feedback
     set((state) => {
       const newNotes = new Map(state.imeiNotes);
       const existing = newNotes.get(imei) || {
@@ -161,9 +162,38 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       
       return { imeiNotes: newNotes };
     });
+
+    // Sync to backend
+    try {
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
+      const shouldDeactivate = suspended || deactivated || blacklisted || byodSwap;
+      
+      const response = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notes,
+          suspended,
+          deactivated,
+          blacklisted,
+          byodSwap,
+          customerName,
+          customerNumber,
+          customerEmail,
+          isActive: shouldDeactivate ? false : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to sync IMEI notes to backend:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error syncing IMEI notes to backend:', error);
+    }
   },
   
-  updateWithholdingResolved: (imei, resolved) => {
+  updateWithholdingResolved: async (imei, resolved) => {
+    // Update local state
     set((state) => {
       const newNotes = new Map(state.imeiNotes);
       const existing = newNotes.get(imei) || {
@@ -178,6 +208,22 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       newNotes.set(imei, { ...existing, withholdingResolved: resolved });
       return { imeiNotes: newNotes };
     });
+
+    // Sync to backend
+    try {
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
+      const response = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ withholdingResolved: resolved }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to sync withholding status to backend:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error syncing withholding status to backend:', error);
+    }
   },
   
   getIMEINotes: (imei) => {

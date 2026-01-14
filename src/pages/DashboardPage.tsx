@@ -137,8 +137,29 @@ export function DashboardPage() {
         if (!response.ok) throw new Error('Failed to fetch commission records');
         const data = await response.json();
         setRecords(data);
+        
+        // Build IMEI notes map from fetched records
+        const notesMap = new Map<string, any>();
+        data.forEach((record: any) => {
+          if (!notesMap.has(record.imei)) {
+            notesMap.set(record.imei, {
+              imei: record.imei,
+              notes: record.notes || '',
+              suspended: record.suspended || false,
+              deactivated: record.deactivated || false,
+              blacklisted: record.blacklisted || false,
+              byodSwap: record.byodSwap || false,
+              customerName: record.customerName,
+              customerNumber: record.customerNumber,
+              customerEmail: record.customerEmail,
+              withholdingResolved: record.withholdingResolved || false,
+            });
+          }
+        });
+        
+        // Update the store's IMEI notes map
+        useCommissionStore.setState({ imeiNotes: notesMap });
       } catch (err) {
-        // Optionally log or show error
         console.error('Error loading commission records:', err);
       }
     };

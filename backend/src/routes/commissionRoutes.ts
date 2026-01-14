@@ -6,6 +6,8 @@ import {
   updateCommission,
   deleteCommission,
   uploadCommissions,
+  updateIMEINotes,
+  getIMEINotes,
 } from '../controllers/commissionController';
 
 const router = Router();
@@ -17,5 +19,9 @@ router.post('/upload', uploadCommissions);
 router.get('/:id', getCommissionById);
 router.put('/:id', updateCommission);
 router.delete('/:id', deleteCommission);
+
+// IMEI notes routes
+router.put('/imei/:imei/notes', updateIMEINotes);
+router.get('/imei/:imei/notes', getIMEINotes);
 
 export default router;

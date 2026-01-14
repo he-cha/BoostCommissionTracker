@@ -69,3 +69,78 @@ export const deleteCommission = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to delete commission record' });
   }
 };
+
+// Update IMEI notes for all records with a specific IMEI
+export const updateIMEINotes = async (req: Request, res: Response) => {
+  try {
+    const { imei } = req.params;
+    const {
+      notes,
+      suspended,
+      deactivated,
+      blacklisted,
+      byodSwap,
+      customerName,
+      customerNumber,
+      customerEmail,
+      withholdingResolved,
+      isActive,
+    } = req.body;
+
+    // Update all records with this IMEI
+    const updateData: any = {};
+    if (notes !== undefined) updateData.notes = notes;
+    if (suspended !== undefined) updateData.suspended = suspended;
+    if (deactivated !== undefined) updateData.deactivated = deactivated;
+    if (blacklisted !== undefined) updateData.blacklisted = blacklisted;
+    if (byodSwap !== undefined) updateData.byodSwap = byodSwap;
+    if (customerName !== undefined) updateData.customerName = customerName;
+    if (customerNumber !== undefined) updateData.customerNumber = customerNumber;
+    if (customerEmail !== undefined) updateData.customerEmail = customerEmail;
+    if (withholdingResolved !== undefined) updateData.withholdingResolved = withholdingResolved;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    const result = await CommissionRecord.updateMany(
+      { imei },
+      { $set: updateData }
+    );
+
+    res.json({ 
+      message: 'IMEI notes updated', 
+      modifiedCount: result.modifiedCount,
+      imei,
+      updates: updateData
+    });
+  } catch (error) {
+    console.error('Update IMEI notes error:', error);
+    res.status(400).json({ error: 'Failed to update IMEI notes' });
+  }
+};
+
+// Get IMEI notes (from any record with this IMEI)
+export const getIMEINotes = async (req: Request, res: Response) => {
+  try {
+    const { imei } = req.params;
+    const record = await CommissionRecord.findOne({ imei });
+    
+    if (!record) {
+      return res.status(404).json({ error: 'IMEI not found' });
+    }
+
+    res.json({
+      imei: record.imei,
+      notes: record.notes || '',
+      suspended: record.suspended || false,
+      deactivated: record.deactivated || false,
+      blacklisted: record.blacklisted || false,
+      byodSwap: record.byodSwap || false,
+      customerName: record.customerName,
+      customerNumber: record.customerNumber,
+      customerEmail: record.customerEmail,
+      withholdingResolved: record.withholdingResolved || false,
+    });
+  } catch (error) {
+    console.error('Get IMEI notes error:', error);
+    res.status(500).json({ error: 'Failed to fetch IMEI notes' });
+  }
+};
