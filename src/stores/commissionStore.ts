@@ -80,10 +80,27 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     });
   },
   
-  updateRecord: (id, updates) => {
+  updateRecord: async (id, updates) => {
+    // Update local state first for immediate UI feedback
     set((state) => ({
       records: state.records.map(r => r.id === id ? { ...r, ...updates } : r)
     }));
+
+    // Sync to backend
+    try {
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/${id}`;
+      const response = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to update record in database:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error updating record:', error);
+    }
   },
   
   deleteRecord: (id) => {
@@ -230,7 +247,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     return get().imeiNotes.get(imei);
   },
   
-  addMonthPayment: (imei, month, amount, paymentReceived, paymentDate) => {
+  addMonthPayment: async (imei, month, amount, paymentReceived, paymentDate) => {
     const records = get().getRecordsByIMEI(imei);
     const activationRecord = records.find(r => r.activationDate) || records[0];
     
@@ -253,9 +270,29 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       manuallyEntered: true,
     };
     
-    set((state) => ({
-      records: [...state.records, newRecord],
-    }));
+    // Save to backend first
+    try {
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRecord),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to save manual payment to database:', response.statusText);
+        return;
+      }
+
+      const savedRecord = await response.json();
+      
+      // Update local state with the saved record (which has the database _id)
+      set((state) => ({
+        records: [...state.records, { ...newRecord, id: savedRecord._id }],
+      }));
+    } catch (error) {
+      console.error('Error saving manual payment:', error);
+    }
   },
   
   getMetrics: (filters) => {
