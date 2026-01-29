@@ -142,11 +142,7 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
 
     // Dates (must be parsed before monthNumber logic)
     const paymentDateRaw = col.paymentDate >= 0 ? columns[col.paymentDate] || '' : '';
-    let activationDateRaw = col.activationDate >= 0 ? columns[col.activationDate] || '' : '';
-    // If activation date is missing, use payment date as fallback
-    if (!activationDateRaw && paymentDateRaw) {
-      activationDateRaw = paymentDateRaw;
-    }
+    const activationDateRaw = col.activationDate >= 0 ? columns[col.activationDate] || '' : '';
     const paymentDate = parseDateFlexible(paymentDateRaw);
     const activationDate = parseDateFlexible(activationDateRaw);
 
@@ -157,14 +153,19 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
       allMonths = extractAllMonthNumbers(paymentDescription);
     }
 
-    // If no explicit months, fallback to auto-calc using payment date and activation date
-    if (allMonths.length === 0 && activationDate && paymentDate) {
-      const act = new Date(activationDate);
-      const pay = new Date(paymentDate);
-      if (!isNaN(act.getTime()) && !isNaN(pay.getTime())) {
-        const diffDays = Math.floor((pay.getTime() - act.getTime()) / (1000 * 60 * 60 * 24));
-        const autoMonth = Math.floor(diffDays / 35) + 1;
-        if (autoMonth >= 1 && autoMonth <= 6) allMonths = [autoMonth];
+    // If no explicit months, fallback to auto-calc using payment date and activation date (or payment date if activation date missing)
+    if (allMonths.length === 0 && paymentDate) {
+      // Use activationDate if present, otherwise use paymentDate as a stand-in for calculation only
+      const act = activationDate || paymentDate;
+      const pay = paymentDate;
+      if (act && pay) {
+        const actDate = new Date(act);
+        const payDate = new Date(pay);
+        if (!isNaN(actDate.getTime()) && !isNaN(payDate.getTime())) {
+          const diffDays = Math.floor((payDate.getTime() - actDate.getTime()) / (1000 * 60 * 60 * 24));
+          const autoMonth = Math.floor(diffDays / 35) + 1;
+          if (autoMonth >= 1 && autoMonth <= 6) allMonths = [autoMonth];
+        }
       }
     }
 
