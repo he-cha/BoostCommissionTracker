@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -7,11 +7,25 @@ import { useCommissionStore } from '../../stores/commissionStore';
 import { useEffect } from 'react';
 import { parseBoostCSV } from '../../lib/csvParser';
 
-export function CSVUpload() {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   const { toast } = useToast();
   const setRecords = useCommissionStore((state) => state.setRecords || (() => {}));
+
+  // Fetch uploaded files from backend
+  const fetchUploadedFiles = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/uploaded-files`);
+      if (res.ok) {
+        const files = await res.json();
+        setUploadedFiles(files);
+      }
+    } catch (err) {
+      console.error('Failed to fetch uploaded files:', err);
+    }
+  };
+  useEffect(() => { fetchUploadedFiles(); }, []);
 
   const handleFile = async (file: File) => {
     if (!file.name.endsWith('.csv')) {
@@ -53,6 +67,22 @@ export function CSVUpload() {
         throw new Error('Failed to upload records to backend');
       }
 
+      // Save file metadata to backend
+      const fileMeta = {
+        fileId,
+        filename: file.name,
+        recordCount: records.length,
+        totalAmount: records.reduce((sum, r) => sum + (r.amount || 0), 0),
+      };
+      const metaRes = await fetch(`${import.meta.env.VITE_API_URL}/api/uploaded-files`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fileMeta),
+      });
+      if (!metaRes.ok) {
+        throw new Error('Failed to save file metadata');
+      }
+
       // Fetch all records from backend after upload
       const fetchUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
       const fetchRes = await fetch(fetchUrl);
@@ -61,6 +91,9 @@ export function CSVUpload() {
       }
       const allRecords = await fetchRes.json();
       setRecords(allRecords);
+
+      // Refresh uploaded files list
+      await fetchUploadedFiles();
 
       toast({
         title: 'CSV uploaded successfully',
@@ -76,6 +109,26 @@ export function CSVUpload() {
     } finally {
       setIsProcessing(false);
     }
+    // Delete file handler
+    const handleDeleteFile = async (fileId: string, filename: string) => {
+      if (!window.confirm(`Delete "${filename}" and all its records?`)) return;
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/uploaded-files/${fileId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete file');
+        toast({
+          title: 'File deleted',
+          description: `"${filename}" and all associated records have been removed`,
+          variant: 'destructive',
+        });
+        await fetchUploadedFiles();
+      } catch (err) {
+        toast({
+          title: 'Delete failed',
+          description: err instanceof Error ? err.message : 'Failed to delete file',
+          variant: 'destructive',
+        });
+      }
+    };
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -151,6 +204,50 @@ export function CSVUpload() {
               <p className="text-xs text-muted-foreground mt-1">Parsing IMEI-based records</p>
             </>
           )}
+        </div>
+
+        {/* Uploaded files list */}
+        <div className="mt-8">
+          <h4 className="text-base font-semibold mb-2 flex items-center gap-2">
+            <FileText className="h-4 w-4" /> Uploaded Files
+          </h4>
+          <div className="space-y-3">
+            {uploadedFiles.length === 0 && (
+              <div className="text-muted-foreground text-sm">No files uploaded yet.</div>
+            )}
+            {uploadedFiles.map((file) => (
+              <div
+                key={file.fileId}
+                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex-shrink-0">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm truncate">{file.filename}</h4>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                      <span>{new Date(file.uploadedAt).toLocaleDateString()}</span>
+                      <span>•</span>
+                      <span>{file.recordCount} records</span>
+                      <span>•</span>
+                      <span className={file.totalAmount >= 0 ? 'text-success' : 'text-destructive'}>
+                        ${file.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteFile(file.fileId, file.filename)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="mt-6 bg-muted/50 rounded-lg p-4 border">

@@ -12,6 +12,19 @@ export const uploadCommissions = async (req: Request, res: Response) => {
     // Insert many records at once
     const inserted = await CommissionRecord.insertMany(records, { ordered: false });
     console.log('Inserted records:', inserted.length);
+      // Save file metadata to UploadedFile collection
+      if (records.length > 0) {
+        const { fileId, filename } = records[0];
+        const recordCount = records.length;
+        const totalAmount = records.reduce((sum, r) => sum + (r.amount || 0), 0);
+        if (fileId && filename) {
+          try {
+            await UploadedFile.create({ fileId, filename, recordCount, totalAmount });
+          } catch (err) {
+            console.error('Failed to save uploaded file metadata:', err);
+          }
+        }
+      }
     res.status(201).json(inserted);
   } catch (error: any) {
     console.error('Bulk upload error:', error);
@@ -20,6 +33,7 @@ export const uploadCommissions = async (req: Request, res: Response) => {
 };
 import { Request, Response } from 'express';
 import CommissionRecord from '../models/CommissionRecord';
+  import UploadedFile from '../models/UploadedFile';
 
 export const getAllCommissions = async (_req: Request, res: Response) => {
   try {

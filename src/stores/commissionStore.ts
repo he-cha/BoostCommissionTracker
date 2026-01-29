@@ -68,11 +68,21 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     });
   },
   
-  deleteFile: (fileId) => {
+  deleteFile: async (fileId) => {
+    // Find all record IDs for this file
+    const state = get();
+    const recordsToDelete = state.records.filter(r => r.fileId === fileId);
+    // Delete each record from backend
+    for (const record of recordsToDelete) {
+      try {
+        const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/${record.id}`;
+        await fetch(apiUrl, { method: 'DELETE' });
+      } catch (error) {
+        console.error('Failed to delete record from backend:', error);
+      }
+    }
+    // Update local state
     set((state) => {
-      const recordsToDelete = state.records.filter(r => r.fileId === fileId).length;
-      console.log(`🗑️ Deleting ${recordsToDelete} records from file ${fileId}`);
-      
       return {
         records: state.records.filter(r => r.fileId !== fileId),
         uploadedFiles: state.uploadedFiles.filter(f => f.id !== fileId),
@@ -103,7 +113,15 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     }
   },
   
-  deleteRecord: (id) => {
+  deleteRecord: async (id) => {
+    // Delete from backend
+    try {
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/${id}`;
+      await fetch(apiUrl, { method: 'DELETE' });
+    } catch (error) {
+      console.error('Failed to delete record from backend:', error);
+    }
+    // Update local state
     set((state) => ({
       records: state.records.filter(r => r.id !== id)
     }));

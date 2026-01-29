@@ -142,7 +142,11 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
 
     // Dates (must be parsed before monthNumber logic)
     const paymentDateRaw = col.paymentDate >= 0 ? columns[col.paymentDate] || '' : '';
-    const activationDateRaw = col.activationDate >= 0 ? columns[col.activationDate] || '' : '';
+    let activationDateRaw = col.activationDate >= 0 ? columns[col.activationDate] || '' : '';
+    // If activation date is missing, use payment date as fallback
+    if (!activationDateRaw && paymentDateRaw) {
+      activationDateRaw = paymentDateRaw;
+    }
     const paymentDate = parseDateFlexible(paymentDateRaw);
     const activationDate = parseDateFlexible(activationDateRaw);
 
