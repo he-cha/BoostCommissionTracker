@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Trash2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useCommissionStore } from '../../stores/commissionStore';
-import { useEffect } from 'react';
 import { parseBoostCSV } from '../../lib/csvParser';
 
+export function CSVUpload() {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   const { toast } = useToast();
-  const setRecords = useCommissionStore((state) => state.setRecords || (() => {}));
+  const setRecords = useCommissionStore((state) => state.setRecords);
 
   // Fetch uploaded files from backend
   const fetchUploadedFiles = async () => {
@@ -25,7 +25,41 @@ import { parseBoostCSV } from '../../lib/csvParser';
       console.error('Failed to fetch uploaded files:', err);
     }
   };
-  useEffect(() => { fetchUploadedFiles(); }, []);
+
+  useEffect(() => {
+    fetchUploadedFiles();
+  }, []);
+
+  // Delete file handler
+  const handleDeleteFile = async (fileId: string, filename: string) => {
+    if (!window.confirm(`Delete "${filename}" and all its records?`)) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/uploaded-files/${fileId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete file');
+      
+      toast({
+        title: 'File deleted',
+        description: `"${filename}" and all associated records have been removed`,
+      });
+      
+      // Refresh uploaded files list and records
+      await fetchUploadedFiles();
+      
+      // Refresh all commission records
+      const fetchUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
+      const fetchRes = await fetch(fetchUrl);
+      if (fetchRes.ok) {
+        const allRecords = await fetchRes.json();
+        setRecords(allRecords);
+      }
+    } catch (err) {
+      toast({
+        title: 'Delete failed',
+        description: err instanceof Error ? err.message : 'Failed to delete file',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleFile = async (file: File) => {
     if (!file.name.endsWith('.csv')) {
@@ -109,26 +143,6 @@ import { parseBoostCSV } from '../../lib/csvParser';
     } finally {
       setIsProcessing(false);
     }
-    // Delete file handler
-    const handleDeleteFile = async (fileId: string, filename: string) => {
-      if (!window.confirm(`Delete "${filename}" and all its records?`)) return;
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/uploaded-files/${fileId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Failed to delete file');
-        toast({
-          title: 'File deleted',
-          description: `"${filename}" and all associated records have been removed`,
-          variant: 'destructive',
-        });
-        await fetchUploadedFiles();
-      } catch (err) {
-        toast({
-          title: 'Delete failed',
-          description: err instanceof Error ? err.message : 'Failed to delete file',
-          variant: 'destructive',
-        });
-      }
-    };
   };
 
   const handleDragOver = (e: React.DragEvent) => {
