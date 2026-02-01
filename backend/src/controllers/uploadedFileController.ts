@@ -11,6 +11,7 @@ export const getAllUploadedFiles = async (_req: Request, res: Response) => {
   }
 };
 
+export const createUploadedFile = async (req: Request, res: Response) => {
   try {
     const file = new UploadedFile(req.body);
     await file.save();
