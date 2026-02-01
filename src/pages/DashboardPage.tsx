@@ -434,9 +434,9 @@ export function DashboardPage() {
             <TabsTrigger value="summary">IMEI Summary</TabsTrigger>
             <TabsTrigger value="alerts" className="gap-2">
               Alerts
-              {alerts.length > 0 && (
+              {alerts.filter(a => a.severity === 'high').length > 0 && (
                 <span className="bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                  {alerts.length}
+                  {alerts.filter(a => a.severity === 'high').length}
                 </span>
               )}
             </TabsTrigger>

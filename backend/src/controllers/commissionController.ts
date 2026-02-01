@@ -1,7 +1,11 @@
+import { Request, Response } from 'express';
+import CommissionRecord from '../models/CommissionRecord';
+import UploadedFile from '../models/UploadedFile';
+
 // Bulk upload commissions
 export const uploadCommissions = async (req: Request, res: Response) => {
   try {
-    const { records } = req.body;
+    let { records } = req.body;
     console.log('Received records for upload:', Array.isArray(records) ? records.length : records);
     if (!Array.isArray(records) || records.length === 0) {
       console.error('No records provided');
@@ -9,31 +13,59 @@ export const uploadCommissions = async (req: Request, res: Response) => {
     }
     // Log a sample record for debugging
     console.log('Sample record:', records[0]);
-    // Insert many records at once
-    const inserted = await CommissionRecord.insertMany(records, { ordered: false });
-    console.log('Inserted records:', inserted.length);
-      // Save file metadata to UploadedFile collection
-      if (records.length > 0) {
-        const { fileId, filename } = records[0];
-        const recordCount = records.length;
-        const totalAmount = records.reduce((sum, r) => sum + (r.amount || 0), 0);
-        if (fileId && filename) {
-          try {
-            await UploadedFile.create({ fileId, filename, recordCount, totalAmount });
-          } catch (err) {
-            console.error('Failed to save uploaded file metadata:', err);
-          }
+
+    // Enhance records: fill missing activationDate from DB, assign correct monthNumber
+    const enhancedRecords = [];
+    for (const rec of records) {
+      let activationDate = rec.activationDate;
+      // If missing, look up in DB
+      if (!activationDate && rec.imei) {
+        const found = await CommissionRecord.findOne({ imei: rec.imei, activationDate: { $ne: '' } });
+        if (found) activationDate = found.activationDate;
+      }
+      // If still missing, skip this record
+      if (!activationDate) continue;
+
+      // Month assignment: use explicit month if present, else calculate
+      let monthNumber = rec.monthNumber;
+      if (!monthNumber && rec.paymentDate && activationDate) {
+        const actDate = new Date(activationDate);
+        const payDate = new Date(rec.paymentDate);
+        if (!isNaN(actDate.getTime()) && !isNaN(payDate.getTime())) {
+          const diffDays = Math.floor((payDate.getTime() - actDate.getTime()) / (1000 * 60 * 60 * 24));
+          const autoMonth = Math.floor(diffDays / 35) + 1;
+          if (autoMonth >= 1 && autoMonth <= 6) monthNumber = autoMonth;
         }
       }
+      enhancedRecords.push({ ...rec, activationDate, monthNumber });
+    }
+
+    if (enhancedRecords.length === 0) {
+      return res.status(400).json({ error: 'No valid commission records after enhancement' });
+    }
+
+    // Insert many records at once
+    const inserted = await CommissionRecord.insertMany(enhancedRecords, { ordered: false });
+    console.log('Inserted records:', inserted.length);
+    // Save file metadata to UploadedFile collection
+    if (enhancedRecords.length > 0) {
+      const { fileId, filename } = enhancedRecords[0];
+      const recordCount = enhancedRecords.length;
+      const totalAmount = enhancedRecords.reduce((sum, r) => sum + (r.amount || 0), 0);
+      if (fileId && filename) {
+        try {
+          await UploadedFile.create({ fileId, filename, recordCount, totalAmount });
+        } catch (err) {
+          console.error('Failed to save uploaded file metadata:', err);
+        }
+      }
+    }
     res.status(201).json(inserted);
   } catch (error: any) {
     console.error('Bulk upload error:', error);
     res.status(400).json({ error: 'Failed to upload commission records', details: error?.message || error });
   }
 };
-import { Request, Response } from 'express';
-import CommissionRecord from '../models/CommissionRecord';
-  import UploadedFile from '../models/UploadedFile';
 
 export const getAllCommissions = async (_req: Request, res: Response) => {
   try {
