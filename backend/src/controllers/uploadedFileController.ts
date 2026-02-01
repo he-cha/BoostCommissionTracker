@@ -11,7 +11,6 @@ export const getAllUploadedFiles = async (_req: Request, res: Response) => {
   }
 };
 
-export const createUploadedFile = async (req: Request, res: Response) => {
   try {
     const file = new UploadedFile(req.body);
     await file.save();
@@ -21,6 +20,7 @@ export const createUploadedFile = async (req: Request, res: Response) => {
   }
 };
 
+export const deleteUploadedFile = async (req: Request, res: Response) => {
   try {
     const file = await UploadedFile.findOneAndDelete({ fileId: req.params.fileId });
     if (!file) return res.status(404).json({ error: 'File not found' });
