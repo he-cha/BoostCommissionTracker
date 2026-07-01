@@ -9,30 +9,8 @@ function toISODate(dateStr: string): string {
   return `${year}-${mm}-${dd}`;
 }
 
-import { CommissionRecord } from '../types';
-import { parseCSVLine, cleanIMEI } from './utils';
-
-// Enhanced month extraction: looks for 'Month X' or 'MonthX' (with or without space)
-function extractMonthNumberFlexible(desc: string): number | null {
-  if (!desc) return null;
-  const match = desc.match(/Month\s*(\d+)/i);
-  return match ? parseInt(match[1]) : null;
-}
-
-// Extract all month numbers from a string (e.g., 'Month 1, 2, 3')
-function extractAllMonthNumbers(desc: string): number[] {
-  if (!desc) return [];
-  // Match all occurrences of 'Month X', 'MonthX', 'month 2', etc. (case-insensitive, optional space)
-  const regex = /month\s*(\d{1,2})/gi;
-  const monthNums: number[] = [];
-  let match;
-  while ((match = regex.exec(desc)) !== null) {
-    const num = parseInt(match[1]);
-    if (num >= 1 && num <= 6) monthNums.push(num);
-  }
-  // Remove duplicates
-  return Array.from(new Set(monthNums));
-}
+import type { CommissionRecord } from '../types/index.ts';
+import { parseCSVLine, cleanIMEI, extractMonthNumbers } from './utils.ts';
 
 
 export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRecord[] {
@@ -86,17 +64,25 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
   const records: CommissionRecord[] = [];
   const timestamp = Date.now();
 
-  // Accept both MM/DD/YYYY and MM-DD-YYYY
+  // Accept ISO, MM/DD/YYYY, and MM-DD-YYYY
   const parseDateFlexible = (dateStr: string): string => {
     if (!dateStr) return '';
+
+    const iso = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (iso) {
+      const [, yyyy, mm, dd] = iso;
+      const parsed = new Date(`${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}T00:00:00`);
+      if (!isNaN(parsed.getTime())) return parsed.toISOString();
+    }
+
     // Try MM/DD/YYYY or MM-DD-YYYY
     const mdy = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
     if (mdy) {
-      const [ , mm, dd, yyyy ] = mdy;
-      // Always return full ISO string
-      const iso = new Date(`${yyyy.length === 2 ? '20'+yyyy : yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}T00:00:00`).toISOString();
-      return iso;
+      const [, mm, dd, yyyy] = mdy;
+      const parsed = new Date(`${yyyy.length === 2 ? '20' + yyyy : yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}T00:00:00`);
+      if (!isNaN(parsed.getTime())) return parsed.toISOString();
     }
+
     // Fallback to ISO
     const d = new Date(dateStr);
     if (!isNaN(d.getTime())) return d.toISOString();
@@ -148,9 +134,9 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
 
     // Extract month numbers: prioritize Payment Type, fallback to Payment Description
     const paymentTypeStr = col.paymentType >= 0 ? columns[col.paymentType] : '';
-    let allMonths = extractAllMonthNumbers(paymentTypeStr);
+    let allMonths = extractMonthNumbers(paymentTypeStr);
     if (allMonths.length === 0) {
-      allMonths = extractAllMonthNumbers(paymentDescription);
+      allMonths = extractMonthNumbers(paymentDescription);
     }
 
     // If no explicit months, fallback to auto-calc using payment date and activation date (or payment date if activation date missing)
