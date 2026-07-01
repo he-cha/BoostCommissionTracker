@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './db';
+import { runBackfillExistingMonthNumbers } from './controllers/commissionController';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -31,7 +32,14 @@ const PORT = process.env.PORT || 5000;
 
 import { cleanupIMEIsBackground } from './cleanupIMEIsBackground';
 
-connectDB().then(() => {
+connectDB().then(async () => {
+  try {
+    const backfillResult = await runBackfillExistingMonthNumbers();
+    console.log(`[BACKFILL] Updated ${backfillResult.updatedRecords} records and created ${backfillResult.createdRecords} split records`);
+  } catch (error) {
+    console.error('[BACKFILL ERROR]', error);
+  }
+
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     // Run cleanup job every 24 hours

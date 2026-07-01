@@ -121,50 +121,54 @@ export const deleteCommission = async (req: Request, res: Response) => {
 };
 
 // Update IMEI notes for all records with a specific IMEI
-export const backfillExistingMonthNumbers = async (_req: Request, res: Response) => {
-  try {
-    const commissions = await CommissionRecord.find();
-    let updatedRecords = 0;
-    let createdRecords = 0;
+export const runBackfillExistingMonthNumbers = async () => {
+  const commissions = await CommissionRecord.find();
+  let updatedRecords = 0;
+  let createdRecords = 0;
 
-    for (const commission of commissions) {
-      const inferredMonths = inferMonthNumbersFromRecord({
-        monthNumber: commission.monthNumber,
-        paymentType: commission.paymentType,
-        paymentDescription: commission.paymentDescription,
-        paymentDate: commission.paymentDate,
-        activationDate: commission.activationDate,
-      });
+  for (const commission of commissions) {
+    const inferredMonths = inferMonthNumbersFromRecord({
+      monthNumber: commission.monthNumber,
+      paymentType: commission.paymentType,
+      paymentDescription: commission.paymentDescription,
+      paymentDate: commission.paymentDate,
+      activationDate: commission.activationDate,
+    });
 
-      if (inferredMonths.length === 0) continue;
+    if (inferredMonths.length === 0) continue;
 
-      if (inferredMonths.length === 1) {
-        const targetMonth = inferredMonths[0];
-        if (commission.monthNumber !== targetMonth) {
-          commission.monthNumber = targetMonth;
-          await commission.save();
-          updatedRecords += 1;
-        }
-        continue;
+    if (inferredMonths.length === 1) {
+      const targetMonth = inferredMonths[0];
+      if (commission.monthNumber !== targetMonth) {
+        commission.monthNumber = targetMonth;
+        await commission.save();
+        updatedRecords += 1;
       }
-
-      const { _id, __v, ...baseData } = commission.toObject();
-
-      await CommissionRecord.deleteOne({ _id: commission._id });
-      const splitRecords = inferredMonths.map((monthNumber) => ({
-        ...baseData,
-        monthNumber,
-        id: `${commission.imei}-${Date.now()}-m${monthNumber}`,
-      }));
-      await CommissionRecord.insertMany(splitRecords);
-      createdRecords += splitRecords.length;
-      updatedRecords += 1;
+      continue;
     }
 
+    const { _id, __v, ...baseData } = commission.toObject();
+
+    await CommissionRecord.deleteOne({ _id: commission._id });
+    const splitRecords = inferredMonths.map((monthNumber) => ({
+      ...baseData,
+      monthNumber,
+      id: `${commission.imei}-${Date.now()}-m${monthNumber}`,
+    }));
+    await CommissionRecord.insertMany(splitRecords);
+    createdRecords += splitRecords.length;
+    updatedRecords += 1;
+  }
+
+  return { updatedRecords, createdRecords };
+};
+
+export const backfillExistingMonthNumbers = async (_req: Request, res: Response) => {
+  try {
+    const result = await runBackfillExistingMonthNumbers();
     res.json({
       message: 'Existing commission month numbers backfilled',
-      updatedRecords,
-      createdRecords,
+      ...result,
     });
   } catch (error) {
     console.error('Backfill month numbers error:', error);
