@@ -25,6 +25,23 @@ export function extractMonthNumbers(desc: string): number[] {
   return Array.from(monthNumbers).sort((a, b) => a - b);
 }
 
+export function inferMonthNumberFromDates(activationDate: string, paymentDate: string): number | null {
+  if (!activationDate || !paymentDate) return null;
+
+  const activation = new Date(activationDate);
+  const payment = new Date(paymentDate);
+  if (isNaN(activation.getTime()) || isNaN(payment.getTime())) return null;
+
+  const diffDays = Math.floor((payment.getTime() - activation.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return null;
+
+  if (diffDays <= 15) return 1;
+  if (diffDays <= 55) return 2;
+
+  const inferredMonth = Math.floor((diffDays - 8) / 40) + 1;
+  return inferredMonth >= 1 && inferredMonth <= 6 ? inferredMonth : null;
+}
+
 export function inferMonthNumbersFromRecord(record: {
   monthNumber?: number | null;
   paymentType?: string;
@@ -42,14 +59,9 @@ export function inferMonthNumbersFromRecord(record: {
     return [record.monthNumber];
   }
 
-  if (record.paymentDate && (record.activationDate || record.paymentDate)) {
-    const actDate = new Date(record.activationDate || record.paymentDate);
-    const payDate = new Date(record.paymentDate);
-    if (!isNaN(actDate.getTime()) && !isNaN(payDate.getTime())) {
-      const diffDays = Math.floor((payDate.getTime() - actDate.getTime()) / (1000 * 60 * 60 * 24));
-      const autoMonth = Math.floor(diffDays / 35) + 1;
-      if (autoMonth >= 1 && autoMonth <= 6) return [autoMonth];
-    }
+  if (record.paymentDate && record.activationDate) {
+    const inferredMonth = inferMonthNumberFromDates(record.activationDate, record.paymentDate);
+    if (inferredMonth) return [inferredMonth];
   }
 
   return [];

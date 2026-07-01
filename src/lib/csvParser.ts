@@ -10,7 +10,7 @@ function toISODate(dateStr: string): string {
 }
 
 import type { CommissionRecord } from '../types/index.ts';
-import { parseCSVLine, cleanIMEI, extractMonthNumbers } from './utils.ts';
+import { parseCSVLine, cleanIMEI, extractMonthNumbers, inferMonthNumberFromDates } from './utils.ts';
 
 
 export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRecord[] {
@@ -139,20 +139,10 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
       allMonths = extractMonthNumbers(paymentDescription);
     }
 
-    // If no explicit months, fallback to auto-calc using payment date and activation date (or payment date if activation date missing)
-    if (allMonths.length === 0 && paymentDate) {
-      // Use activationDate if present, otherwise use paymentDate as a stand-in for calculation only
-      const act = activationDate || paymentDate;
-      const pay = paymentDate;
-      if (act && pay) {
-        const actDate = new Date(act);
-        const payDate = new Date(pay);
-        if (!isNaN(actDate.getTime()) && !isNaN(payDate.getTime())) {
-          const diffDays = Math.floor((payDate.getTime() - actDate.getTime()) / (1000 * 60 * 60 * 24));
-          const autoMonth = Math.floor(diffDays / 35) + 1;
-          if (autoMonth >= 1 && autoMonth <= 6) allMonths = [autoMonth];
-        }
-      }
+    // If no explicit months, infer the month from activation-to-payment timing.
+    if (allMonths.length === 0 && activationDate && paymentDate) {
+      const inferredMonth = inferMonthNumberFromDates(activationDate, paymentDate);
+      if (inferredMonth) allMonths = [inferredMonth];
     }
 
     // Sale Type

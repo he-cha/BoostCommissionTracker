@@ -72,6 +72,23 @@ export function extractMonthNumbers(desc: string): number[] {
   return Array.from(monthNumbers).sort((a, b) => a - b);
 }
 
+export function inferMonthNumberFromDates(activationDate: string, paymentDate: string): number | null {
+  if (!activationDate || !paymentDate) return null;
+
+  const activation = new Date(activationDate);
+  const payment = new Date(paymentDate);
+  if (isNaN(activation.getTime()) || isNaN(payment.getTime())) return null;
+
+  const diffDays = Math.floor((payment.getTime() - activation.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return null;
+
+  if (diffDays <= 15) return 1;
+  if (diffDays <= 55) return 2;
+
+  const inferredMonth = Math.floor((diffDays - 8) / 40) + 1;
+  return inferredMonth >= 1 && inferredMonth <= 6 ? inferredMonth : null;
+}
+
 export function calculateExpectedPaymentDate(activationDate: string, monthNumber: number): string {
   const activation = new Date(activationDate);
   if (!activationDate || isNaN(activation.getTime())) return '';
