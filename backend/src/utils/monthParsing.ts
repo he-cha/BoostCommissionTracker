@@ -26,11 +26,15 @@ export function extractMonthNumbers(desc: string): number[] {
 }
 
 export function inferMonthNumberFromDates(activationDate: string, paymentDate: string): number | null {
-  if (!activationDate || !paymentDate) return null;
+  if (!paymentDate) return null;
+
+  const payment = new Date(paymentDate);
+  if (isNaN(payment.getTime())) return null;
+
+  if (!activationDate) return null;
 
   const activation = new Date(activationDate);
-  const payment = new Date(paymentDate);
-  if (isNaN(activation.getTime()) || isNaN(payment.getTime())) return null;
+  if (isNaN(activation.getTime())) return null;
 
   const diffDays = Math.floor((payment.getTime() - activation.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays < 0) return null;
