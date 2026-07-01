@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import CommissionRecord from '../models/CommissionRecord';
 import UploadedFile from '../models/UploadedFile';
+import { inferMonthNumbersFromRecord } from '../utils/monthParsing';
 
 // Bulk upload commissions
 export const uploadCommissions = async (req: Request, res: Response) => {
@@ -15,7 +16,7 @@ export const uploadCommissions = async (req: Request, res: Response) => {
     console.log('Sample record:', records[0]);
 
     // Enhance records: fill missing activationDate from DB, assign correct monthNumber
-    const enhancedRecords = [];
+    const enhancedRecords: any[] = [];
     for (const rec of records) {
       let activationDate = rec.activationDate;
       // If missing, look up in DB
@@ -26,18 +27,21 @@ export const uploadCommissions = async (req: Request, res: Response) => {
       // If still missing, skip this record
       if (!activationDate) continue;
 
-      // Month assignment: use explicit month if present, else calculate
-      let monthNumber = rec.monthNumber;
-      if (!monthNumber && rec.paymentDate && activationDate) {
-        const actDate = new Date(activationDate);
-        const payDate = new Date(rec.paymentDate);
-        if (!isNaN(actDate.getTime()) && !isNaN(payDate.getTime())) {
-          const diffDays = Math.floor((payDate.getTime() - actDate.getTime()) / (1000 * 60 * 60 * 24));
-          const autoMonth = Math.floor(diffDays / 35) + 1;
-          if (autoMonth >= 1 && autoMonth <= 6) monthNumber = autoMonth;
+      const inferredMonths = inferMonthNumbersFromRecord({
+        monthNumber: rec.monthNumber,
+        paymentType: rec.paymentType,
+        paymentDescription: rec.paymentDescription,
+        paymentDate: rec.paymentDate,
+        activationDate,
+      });
+
+      if (inferredMonths.length > 0) {
+        for (const monthNumber of inferredMonths) {
+          enhancedRecords.push({ ...rec, activationDate, monthNumber });
         }
+      } else {
+        enhancedRecords.push({ ...rec, activationDate, monthNumber: rec.monthNumber ?? null });
       }
-      enhancedRecords.push({ ...rec, activationDate, monthNumber });
     }
 
     if (enhancedRecords.length === 0) {
@@ -117,6 +121,57 @@ export const deleteCommission = async (req: Request, res: Response) => {
 };
 
 // Update IMEI notes for all records with a specific IMEI
+export const backfillExistingMonthNumbers = async (_req: Request, res: Response) => {
+  try {
+    const commissions = await CommissionRecord.find();
+    let updatedRecords = 0;
+    let createdRecords = 0;
+
+    for (const commission of commissions) {
+      const inferredMonths = inferMonthNumbersFromRecord({
+        monthNumber: commission.monthNumber,
+        paymentType: commission.paymentType,
+        paymentDescription: commission.paymentDescription,
+        paymentDate: commission.paymentDate,
+        activationDate: commission.activationDate,
+      });
+
+      if (inferredMonths.length === 0) continue;
+
+      if (inferredMonths.length === 1) {
+        const targetMonth = inferredMonths[0];
+        if (commission.monthNumber !== targetMonth) {
+          commission.monthNumber = targetMonth;
+          await commission.save();
+          updatedRecords += 1;
+        }
+        continue;
+      }
+
+      const { _id, __v, ...baseData } = commission.toObject();
+
+      await CommissionRecord.deleteOne({ _id: commission._id });
+      const splitRecords = inferredMonths.map((monthNumber) => ({
+        ...baseData,
+        monthNumber,
+        id: `${commission.imei}-${Date.now()}-m${monthNumber}`,
+      }));
+      await CommissionRecord.insertMany(splitRecords);
+      createdRecords += splitRecords.length;
+      updatedRecords += 1;
+    }
+
+    res.json({
+      message: 'Existing commission month numbers backfilled',
+      updatedRecords,
+      createdRecords,
+    });
+  } catch (error) {
+    console.error('Backfill month numbers error:', error);
+    res.status(500).json({ error: 'Failed to backfill month numbers' });
+  }
+};
+
 export const updateIMEINotes = async (req: Request, res: Response) => {
   try {
     const { imei } = req.params;
