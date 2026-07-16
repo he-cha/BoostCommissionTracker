@@ -102,6 +102,28 @@ export function isLikelyMonthPaymentRecord(paymentType: string, paymentDescripti
   return (hasLikelyPaymentType && !isWithholding) || hasMonthText;
 }
 
+export function getEffectiveMonthNumber(record: {
+  monthNumber?: number | null;
+  paymentType?: string;
+  paymentDescription?: string;
+  paymentDate?: string;
+  activationDate?: string;
+}): number | null {
+  if (typeof record.monthNumber === 'number' && record.monthNumber >= 1 && record.monthNumber <= 6) {
+    return record.monthNumber;
+  }
+
+  if (!record.paymentDate || !record.activationDate) {
+    return null;
+  }
+
+  if (!isLikelyMonthPaymentRecord(record.paymentType || '', record.paymentDescription || '')) {
+    return null;
+  }
+
+  return inferMonthNumberFromDates(record.activationDate, record.paymentDate);
+}
+
 export function calculateExpectedPaymentDate(activationDate: string, monthNumber: number): string {
   const activation = new Date(activationDate);
   if (!activationDate || isNaN(activation.getTime())) return '';

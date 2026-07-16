@@ -35,7 +35,7 @@ export function IMEISummaryTable({ summaries, totalRecords, currentPage, totalPa
     const lowerSearch = searchTerm.toLowerCase();
     return summaries.filter(summary => 
       summary.imei.toLowerCase().includes(lowerSearch) ||
-      summary.saleType.toLowerCase().includes(lowerSearch) ||
+      (summary.saleType || '').toLowerCase().includes(lowerSearch) ||
       summary.store?.toLowerCase().includes(lowerSearch)
     );
   }, [summaries, searchTerm]);

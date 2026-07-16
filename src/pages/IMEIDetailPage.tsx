@@ -9,7 +9,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Label } from '../components/ui/label';
 import { ArrowLeft, Smartphone, Calendar, DollarSign, Save, Plus, CheckCircle2 } from 'lucide-react';
 import { useCommissionStore } from '../stores/commissionStore';
-import { formatCurrency, formatDate, calculateExpectedPaymentDate } from '../lib/utils';
+import { formatCurrency, formatDate, calculateExpectedPaymentDate, getEffectiveMonthNumber } from '../lib/utils';
 import { useToast } from '../hooks/use-toast';
 import { cn } from '../lib/utils';
 
@@ -161,7 +161,7 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
   const renderMonthCard = (month: number) => {
     const expectedDate = calculateExpectedPaymentDate(activationRecord.activationDate, month);
     // Get ALL records for this month (including withholdings)
-    const monthRecords = records.filter(r => r.monthNumber === month);
+    const monthRecords = records.filter(r => getEffectiveMonthNumber(r) === month);
     const positivePayments = monthRecords.filter(r => r.amount > 0);
     const negativePayments = monthRecords.filter(r => r.amount < 0);
     const hasPayments = monthRecords.length > 0;

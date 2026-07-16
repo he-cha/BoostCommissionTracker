@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CommissionRecord, DashboardMetrics, IMEISummary, Alert, MonthPaymentStatus, IMEINotes, FileUpload } from '../types';
-import { calculateExpectedPaymentDate, getPaymentStatus } from '../lib/utils';
+import { calculateExpectedPaymentDate, getEffectiveMonthNumber, getPaymentStatus } from '../lib/utils';
 
 interface CommissionState {
   records: CommissionRecord[];
@@ -410,7 +410,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       if (activationRecord) {
         for (let month = 1; month <= 6; month++) {
           const expectedDate = calculateExpectedPaymentDate(activationRecord.activationDate, month);
-          const monthPayment = imeiRecords.find(r => r.monthNumber === month && r.amount > 0);
+          const monthPayment = imeiRecords.find(r => getEffectiveMonthNumber(r) === month && r.amount > 0);
           if (!monthPayment) {
             // Calculate days overdue
             const today = new Date();
@@ -498,7 +498,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
         if (activationRecord) {
           for (let month = 1; month <= 6; month++) {
             const expectedDate = calculateExpectedPaymentDate(activationRecord.activationDate, month);
-            const monthPayment = imeiRecords.find(r => r.monthNumber === month && r.amount > 0);
+            const monthPayment = imeiRecords.find(r => getEffectiveMonthNumber(r) === month && r.amount > 0);
             if (!monthPayment && getPaymentStatus(expectedDate) === 'overdue') {
               overdueIMEIs.add(imei);
               break;
@@ -551,7 +551,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       
       for (let month = 1; month <= 6; month++) {
         const expectedDate = calculateExpectedPaymentDate(activationDate, month);
-        const monthPayment = imeiRecords.find(r => r.monthNumber === month && r.amount > 0);
+        const monthPayment = imeiRecords.find(r => getEffectiveMonthNumber(r) === month && r.amount > 0);
         
         let status: 'paid' | 'overdue' | 'pending' | 'missing' = 'pending';
         
@@ -562,7 +562,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
           const paymentStatus = getPaymentStatus(expectedDate);
           if (paymentStatus === 'overdue') {
             // Check if there's a later month paid (indicating this month was skipped)
-            const laterMonthPaid = imeiRecords.some(r => r.monthNumber && r.monthNumber > month && r.amount > 0);
+            const laterMonthPaid = imeiRecords.some(r => getEffectiveMonthNumber(r) !== null && getEffectiveMonthNumber(r)! > month && r.amount > 0);
             status = laterMonthPaid ? 'missing' : 'overdue';
           } else {
             status = 'pending';
@@ -596,7 +596,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       summaries.push({
         imei,
         activationDate,
-        saleType: activationRecord.saleType,
+        saleType: activationRecord.saleType || 'Unknown',
         repUsername: activationRecord.repUsername,
         store: activationRecord.store,
         monthsStatus,
