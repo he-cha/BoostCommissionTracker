@@ -23,3 +23,14 @@ test('infers month numbers from activation and payment dates when the month is n
   assert.equal(records.length, 1);
   assert.equal(records[0].monthNumber, 2);
 });
+
+test('does not infer month numbers for unrelated payments like auto top-up', () => {
+  const csv = `Payment Date,Activation Date/Swap Date,IMEI,Amount,Payment Type,Payment Description,Sale Type,Rep Username,Business Name,Adjustment Reason
+2024-05-01,2024-04-28,123456789012345,50,Boost Auto Top-Up,Top-up credit,Standard,rep1,Store A,
+`;
+
+  const records = parseBoostCSV(csv, 'file-2');
+
+  assert.equal(records.length, 1);
+  assert.equal(records[0].monthNumber, null);
+});

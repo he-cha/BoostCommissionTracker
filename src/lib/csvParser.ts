@@ -10,7 +10,7 @@ function toISODate(dateStr: string): string {
 }
 
 import type { CommissionRecord } from '../types/index.ts';
-import { parseCSVLine, cleanIMEI, extractMonthNumbers, inferMonthNumberFromDates } from './utils.ts';
+import { parseCSVLine, cleanIMEI, extractMonthNumbers, inferMonthNumberFromDates, isLikelyMonthPaymentRecord } from './utils.ts';
 
 
 export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRecord[] {
@@ -139,8 +139,8 @@ export function parseBoostCSV(csvContent: string, fileId?: string): CommissionRe
       allMonths = extractMonthNumbers(paymentDescription);
     }
 
-    // If no explicit months, infer the month from activation-to-payment timing.
-    if (allMonths.length === 0 && activationDate && paymentDate) {
+    // If no explicit months, infer the month from activation-to-payment timing only for likely month payments.
+    if (allMonths.length === 0 && activationDate && paymentDate && isLikelyMonthPaymentRecord(paymentTypeStr, paymentDescription)) {
       const inferredMonth = inferMonthNumberFromDates(activationDate, paymentDate);
       if (inferredMonth) allMonths = [inferredMonth];
     }

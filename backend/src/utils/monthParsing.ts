@@ -46,6 +46,15 @@ export function inferMonthNumberFromDates(activationDate: string, paymentDate: s
   return inferredMonth >= 1 && inferredMonth <= 6 ? inferredMonth : null;
 }
 
+export function isLikelyMonthPaymentRecord(paymentType: string, paymentDescription: string): boolean {
+  const combined = `${paymentType || ''} ${paymentDescription || ''}`.toLowerCase();
+  const hasMonthText = /\bmonth\b/.test(combined);
+  const hasLikelyPaymentType = /\b(?:commission|bounty|spiff|incentive)\b/.test(combined);
+  const isWithholding = /\bwithholding\b/.test(combined);
+
+  return (hasLikelyPaymentType && !isWithholding) || hasMonthText;
+}
+
 export function inferMonthNumbersFromRecord(record: {
   monthNumber?: number | null;
   paymentType?: string;
@@ -63,7 +72,7 @@ export function inferMonthNumbersFromRecord(record: {
     return [record.monthNumber];
   }
 
-  if (record.paymentDate && record.activationDate) {
+  if (record.paymentDate && record.activationDate && isLikelyMonthPaymentRecord(record.paymentType || '', record.paymentDescription || '')) {
     const inferredMonth = inferMonthNumberFromDates(record.activationDate, record.paymentDate);
     if (inferredMonth) return [inferredMonth];
   }
