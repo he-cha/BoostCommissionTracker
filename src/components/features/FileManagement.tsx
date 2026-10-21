@@ -11,9 +11,9 @@ export function FileManagement() {
   const uploadedFiles = useCommissionStore((state) => state.uploadedFiles);
   const deleteFile = useCommissionStore((state) => state.deleteFile);
 
-  const handleDeleteFile = (fileId: string, filename: string) => {
+  const handleDeleteFile = async (fileId: string, filename: string) => {
     if (confirm(`Delete "${filename}" and all its ${uploadedFiles.find(f => f.id === fileId)?.recordCount} records?`)) {
-      deleteFile(fileId);
+      if (!await deleteFile(fileId)) { toast({title: 'File could not be deleted', variant: 'destructive'}); return; }
       toast({
         title: 'File deleted',
         description: `"${filename}" and all associated records have been removed`,

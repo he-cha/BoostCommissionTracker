@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../lib/api';
+import { useCommissionStore } from './commissionStore';
 import { create } from 'zustand';
 import { User } from '../types';
 
@@ -21,7 +23,7 @@ export const useAuthStore = create<AuthState>((set) => {
     token,
     login: async (username: string, password: string) => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password }),
@@ -43,6 +45,12 @@ export const useAuthStore = create<AuthState>((set) => {
     logout: () => {
       set({ user: null, isAuthenticated: false, token: null });
       localStorage.removeItem('token');
+      localStorage.removeItem('commission-storage');
+      useCommissionStore.setState({ records: [], uploadedFiles: [], imeiNotes: new Map(), dismissedAlerts: new Set() });
     },
   };
 });
+
+if (typeof window !== "undefined") {
+  window.addEventListener("session-expired", () => useAuthStore.getState().logout());
+}

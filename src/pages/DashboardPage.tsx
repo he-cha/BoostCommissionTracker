@@ -1,3 +1,4 @@
+import { apiFetch, API_BASE_URL } from '../lib/api';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Header } from '../components/layout/Header';
@@ -132,8 +133,8 @@ export function DashboardPage() {
   useEffect(() => {
     const fetchRecords = async () => {
       try {
-        const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
-        const response = await fetch(apiUrl);
+        const apiUrl = `${API_BASE_URL}/api/commissions`;
+        const response = await apiFetch(apiUrl);
         if (!response.ok) throw new Error('Failed to fetch commission records');
         const data = await response.json();
         setRecords(data);

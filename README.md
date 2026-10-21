@@ -20,7 +20,7 @@ This differs from [CommissionTracker](https://github.com/he-cha/CommissionTracke
 3. In `backend`, run `npm ci`, copy `.env.example` to `.env`, and configure a disposable local MongoDB database and a random `JWT_SECRET`.
 4. Run `npm run dev` in `backend` and `npm run dev` at the root.
 
-Backend startup currently runs a month-number backfill and schedules IMEI cleanup. Use a disposable demo database when evaluating the project; do not point a trial run at live business records. Create a local user through the supplied seed scripts only after reviewing their inputs.
+Automatic backfill and IMEI deletion jobs are disabled by default. `RUN_MAINTENANCE_JOBS=true` explicitly enables them, including the protected backfill endpoint. Keep this false for routine evaluation. Create a local user through the supplied seed scripts only after reviewing their inputs. The backend requires a non-placeholder `JWT_SECRET` of at least 32 characters.
 
 ## Parser checks
 
@@ -34,6 +34,6 @@ This executes the existing Node tests for month-range expansion, date-based infe
 
 ## Important implementation limits
 
-The login endpoint exists, but commission and uploaded-file routes currently do not enforce authentication middleware. Do not expose this API with real customer or business data. Add authorization and verify ownership boundaries before a public deployment. CSV allocations, inferred months and historical backfills also need validation against reconciled examples.
+Commission and uploaded-file routes now require a valid signed session. This application remains a single shared staff workspace: all authenticated staff can access its records. It does not provide separate tenants or role-based permissions. CSV allocations, inferred months and historical backfills still need validation against reconciled examples.
 
-This portfolio cleanup adds project-specific documentation, environment examples and an npm test command. It preserves the existing reconciliation behavior and does not claim measured savings or recovered revenue. The frontend and database-backed application were not fully built or run during this review.
+The authorization/validation update also attaches session tokens to frontend API requests, clears local session data after expiry/logout, normalizes database IDs for edits, and waits for server confirmation before displaying successful writes. Frontend and backend builds and frontend type checking passed. See [verification and rollout notes](docs/API_VALIDATION.md) for test coverage and the blocked database integration check.
