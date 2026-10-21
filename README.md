@@ -1,61 +1,39 @@
-# Welcome to your OnSpace project
+# Commission Payment Reconciliation Dashboard
 
-## How can I edit this code?
+**React · TypeScript · Zustand · Express · MongoDB · CSV processing**
 
-There are several ways of editing your application.
+A dashboard for comparing commission payments across device identifiers and payment months. It imports provider CSV files, groups records by IMEI, and helps investigate expected, missing, withheld or adjusted payments.
 
-**Use OnSpace**
+## Workflows visible in the source
 
-Simply visit the [OnSpace Project]() and start prompting.
+- CSV import and normalization, including explicit month ranges and inferred month numbers.
+- Per-device payment summaries, filters, notes and drill-down pages.
+- Views for overdue alerts, suspended/deactivated devices, BYOD and blacklist records.
+- An Express/Mongoose API for commissions, uploaded-file metadata and login.
 
-Changes made via OnSpace will be committed automatically to this repo.
+This differs from [CommissionTracker](https://github.com/he-cha/CommissionTracker), which centers on manual sales entry and sales/bounty summaries. The older `Boost_Comm` and `Boost_Comm_Tracker` repositories are incomplete prototypes rather than equivalent finished applications.
 
-**Use your preferred IDE**
+## Run locally
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in OnSpace.
+1. Install frontend dependencies with `npm ci` at the root.
+2. Copy `.env.example` to `.env`; set the frontend API base URL.
+3. In `backend`, run `npm ci`, copy `.env.example` to `.env`, and configure a disposable local MongoDB database and a random `JWT_SECRET`.
+4. Run `npm run dev` in `backend` and `npm run dev` at the root.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Backend startup currently runs a month-number backfill and schedules IMEI cleanup. Use a disposable demo database when evaluating the project; do not point a trial run at live business records. Create a local user through the supplied seed scripts only after reviewing their inputs.
 
-Follow these steps:
+## Parser checks
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+With Node.js 22.18+ or 24 and dependencies installed:
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+npm test
 ```
 
-**Edit a file directly in GitHub**
+This executes the existing Node tests for month-range expansion, date-based inference and unrelated payment categories. The tests were run during this cleanup. Their passing result does not establish accounting accuracy across all provider file formats.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Important implementation limits
 
-**Use GitHub Codespaces**
+The login endpoint exists, but commission and uploaded-file routes currently do not enforce authentication middleware. Do not expose this API with real customer or business data. Add authorization and verify ownership boundaries before a public deployment. CSV allocations, inferred months and historical backfills also need validation against reconciled examples.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [OnSpace]() and click on Share -> Publish.
+This portfolio cleanup adds project-specific documentation, environment examples and an npm test command. It preserves the existing reconciliation behavior and does not claim measured savings or recovered revenue. The frontend and database-backed application were not fully built or run during this review.
