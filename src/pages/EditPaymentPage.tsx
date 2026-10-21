@@ -50,17 +50,25 @@ export function EditPaymentPage({ recordId, onBack }: EditPaymentPageProps) {
     );
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const updates: any = {
       amount: parseFloat(amount),
       paymentType,
+      paymentReceived,
     };
 
     if (paymentReceived && paymentDate) {
       updates.paymentDate = paymentDate;
     }
 
-    updateRecord(recordId, updates);
+    if (!Number.isFinite(updates.amount)) {
+      toast({title: 'Invalid amount', variant: 'destructive'});
+      return;
+    }
+    if (!await updateRecord(recordId, updates)) {
+      toast({title: 'Payment was not saved', description: 'Check your connection and entered values, then try again.', variant: 'destructive'});
+      return;
+    }
     
     toast({
       title: 'Payment updated',

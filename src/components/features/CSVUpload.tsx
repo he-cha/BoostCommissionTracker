@@ -1,3 +1,4 @@
+import { apiFetch, API_BASE_URL } from '../../lib/api';
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -16,7 +17,7 @@ export function CSVUpload() {
   // Fetch uploaded files from backend
   const fetchUploadedFiles = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/uploaded-files`);
+      const res = await apiFetch(`${API_BASE_URL}/api/uploaded-files`);
       if (res.ok) {
         const files = await res.json();
         setUploadedFiles(files);
@@ -34,7 +35,7 @@ export function CSVUpload() {
   const handleDeleteFile = async (fileId: string, filename: string) => {
     if (!window.confirm(`Delete "${filename}" and all its records?`)) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/uploaded-files/${fileId}`, { method: 'DELETE' });
+      const res = await apiFetch(`${API_BASE_URL}/api/uploaded-files/${fileId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete file');
       
       toast({
@@ -46,8 +47,8 @@ export function CSVUpload() {
       await fetchUploadedFiles();
       
       // Refresh all commission records
-      const fetchUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
-      const fetchRes = await fetch(fetchUrl);
+      const fetchUrl = `${API_BASE_URL}/api/commissions`;
+      const fetchRes = await apiFetch(fetchUrl);
       if (fetchRes.ok) {
         const allRecords = await fetchRes.json();
         setRecords(allRecords);
@@ -91,8 +92,8 @@ export function CSVUpload() {
       console.log('First parsed record:', records[0]);
 
       // Send records to backend
-      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/upload`;
-      const response = await fetch(apiUrl, {
+      const apiUrl = `${API_BASE_URL}/api/commissions/upload`;
+      const response = await apiFetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ records }),
@@ -108,7 +109,7 @@ export function CSVUpload() {
         recordCount: records.length,
         totalAmount: records.reduce((sum, r) => sum + (r.amount || 0), 0),
       };
-      const metaRes = await fetch(`${import.meta.env.VITE_API_URL}/api/uploaded-files`, {
+      const metaRes = await apiFetch(`${API_BASE_URL}/api/uploaded-files`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fileMeta),
@@ -118,8 +119,8 @@ export function CSVUpload() {
       }
 
       // Fetch all records from backend after upload
-      const fetchUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
-      const fetchRes = await fetch(fetchUrl);
+      const fetchUrl = `${API_BASE_URL}/api/commissions`;
+      const fetchRes = await apiFetch(fetchUrl);
       if (!fetchRes.ok) {
         throw new Error('Failed to fetch records from backend');
       }

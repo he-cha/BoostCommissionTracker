@@ -40,20 +40,21 @@ export function IMEISummaryTable({ summaries, totalRecords, currentPage, totalPa
     );
   }, [summaries, searchTerm]);
 
-  const handleToggleActive = (imei: string) => {
-    toggleActive(imei);
+  const handleToggleActive = async (imei: string) => {
     const records = getRecordsByIMEI(imei);
     const newState = !records[0]?.isActive;
+    if (!await toggleActive(imei)) { toast({title: 'Status was not saved', variant: 'destructive'}); return; }
     toast({
       title: newState ? 'Activated' : 'Deactivated',
       description: `IMEI ${imei} has been ${newState ? 'activated' : 'deactivated'}`,
     });
   };
 
-  const handleDelete = (imei: string) => {
+  const handleDelete = async (imei: string) => {
     if (confirm(`Delete all records for IMEI ${imei}?`)) {
       const records = getRecordsByIMEI(imei);
-      records.forEach(r => deleteRecord(r.id));
+      const results = await Promise.all(records.map(r => deleteRecord(r.id)));
+      if (results.some(saved => !saved)) { toast({title: 'Some records could not be deleted', description: 'Refresh and retry the remaining records.', variant: 'destructive'}); return; }
       toast({
         title: 'Deleted',
         description: `All records for IMEI ${imei} have been deleted`,

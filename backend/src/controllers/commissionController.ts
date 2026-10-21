@@ -12,8 +12,7 @@ export const uploadCommissions = async (req: Request, res: Response) => {
       console.error('No records provided');
       return res.status(400).json({ error: 'No records provided' });
     }
-    // Log a sample record for debugging
-    console.log('Sample record:', records[0]);
+
 
     // Enhance records: fill missing activationDate from DB, assign correct monthNumber
     const enhancedRecords: any[] = [];
@@ -25,7 +24,7 @@ export const uploadCommissions = async (req: Request, res: Response) => {
         if (found) activationDate = found.activationDate;
       }
       // If still missing, skip this record
-      if (!activationDate) continue;
+      if (!activationDate) return res.status(400).json({ error: 'Every uploaded record needs an activation date or an existing dated record' });
 
       const inferredMonths = inferMonthNumbersFromRecord({
         monthNumber: rec.monthNumber,
@@ -48,8 +47,13 @@ export const uploadCommissions = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No valid commission records after enhancement' });
     }
 
+    // Validate every enhanced record before any database write.
+    for (const record of enhancedRecords) {
+      const error = new CommissionRecord(record).validateSync();
+      if (error) return res.status(400).json({ error: 'Invalid commission record' });
+    }
     // Insert many records at once
-    const inserted = await CommissionRecord.insertMany(enhancedRecords, { ordered: false });
+    const inserted = await CommissionRecord.insertMany(enhancedRecords, { ordered: true });
     console.log('Inserted records:', inserted.length);
     // Save file metadata to UploadedFile collection
     if (enhancedRecords.length > 0) {
@@ -67,7 +71,7 @@ export const uploadCommissions = async (req: Request, res: Response) => {
     res.status(201).json(inserted);
   } catch (error: any) {
     console.error('Bulk upload error:', error);
-    res.status(400).json({ error: 'Failed to upload commission records', details: error?.message || error });
+    res.status(400).json({ error: 'Failed to upload commission records', details: 'Check the supplied record fields' });
   }
 };
 
@@ -102,7 +106,7 @@ export const getCommissionById = async (req: Request, res: Response) => {
 
 export const updateCommission = async (req: Request, res: Response) => {
   try {
-    const commission = await CommissionRecord.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const commission = await CommissionRecord.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true, runValidators: true });
     if (!commission) return res.status(404).json({ error: 'Not found' });
     res.json(commission);
   } catch (error) {
@@ -207,9 +211,11 @@ export const updateIMEINotes = async (req: Request, res: Response) => {
 
     const result = await CommissionRecord.updateMany(
       { imei },
-      { $set: updateData }
+      { $set: updateData },
+      { runValidators: true }
     );
 
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'IMEI not found' });
     res.json({ 
       message: 'IMEI notes updated', 
       modifiedCount: result.modifiedCount,

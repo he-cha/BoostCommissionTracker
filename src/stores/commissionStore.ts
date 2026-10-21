@@ -1,3 +1,5 @@
+import { withDatabaseId } from '../lib/recordIdentity';
+import { apiFetch, API_BASE_URL } from '../lib/api';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CommissionRecord, DashboardMetrics, IMEISummary, Alert, MonthPaymentStatus, IMEINotes, FileUpload } from '../types';
@@ -10,26 +12,26 @@ interface CommissionState {
   imeiNotes: Map<string, IMEINotes>;
   dismissedAlerts: Set<string>;
   addRecords: (records: CommissionRecord[], fileMetadata?: { filename: string; fileId: string }) => void;
-  deleteFile: (fileId: string) => void;
-  updateRecord: (id: string, updates: Partial<CommissionRecord>) => void;
-  deleteRecord: (id: string) => void;
-  toggleActive: (imei: string) => void;
+  deleteFile: (fileId: string) => Promise<boolean>;
+  updateRecord: (id: string, updates: Partial<CommissionRecord>) => Promise<boolean>;
+  deleteRecord: (id: string) => Promise<boolean>;
+  toggleActive: (imei: string) => Promise<boolean>;
   dismissAlert: (alertId: string) => void;
   getRecordsByIMEI: (imei: string) => CommissionRecord[];
   getMetrics: (filters?: { dateRange?: [string, string]; store?: string; category?: string }) => DashboardMetrics;
   getIMEISummaries: (filters?: { dateRange?: [string, string]; store?: string; saleType?: string; category?: string }) => IMEISummary[];
   getAlerts: () => Alert[];
   clearRecords: () => void;
-  updateIMEINotes: (imei: string, notes?: string, suspended?: boolean, deactivated?: boolean, blacklisted?: boolean, byodSwap?: boolean, customerName?: string, customerNumber?: string, customerEmail?: string) => void;
-  updateWithholdingResolved: (imei: string, resolved: boolean) => void;
+  updateIMEINotes: (imei: string, notes?: string, suspended?: boolean, deactivated?: boolean, blacklisted?: boolean, byodSwap?: boolean, customerName?: string, customerNumber?: string, customerEmail?: string) => Promise<boolean>;
+  updateWithholdingResolved: (imei: string, resolved: boolean) => Promise<boolean>;
   getIMEINotes: (imei: string) => IMEINotes | undefined;
-  addMonthPayment: (imei: string, month: number, amount: number, paymentReceived: boolean, paymentDate?: string) => void;
+  addMonthPayment: (imei: string, month: number, amount: number, paymentReceived: boolean, paymentDate?: string) => Promise<boolean>;
 }
 
 
 export const useCommissionStore = create<CommissionState>()(persist((set, get) => ({
   records: [],
-  setRecords: (records: CommissionRecord[]) => set({ records }),
+  setRecords: (records: CommissionRecord[]) => set({ records: records.map(withDatabaseId) }),
   uploadedFiles: [],
   imeiNotes: new Map(),
   dismissedAlerts: new Set(),
@@ -69,37 +71,18 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
   },
   
   deleteFile: async (fileId) => {
-    // Find all record IDs for this file
-    const state = get();
-    const recordsToDelete = state.records.filter(r => r.fileId === fileId);
-    // Delete each record from backend
-    for (const record of recordsToDelete) {
-      try {
-        const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/${record.id}`;
-        await fetch(apiUrl, { method: 'DELETE' });
-      } catch (error) {
-        console.error('Failed to delete record from backend:', error);
-      }
-    }
-    // Update local state
-    set((state) => {
-      return {
-        records: state.records.filter(r => r.fileId !== fileId),
-        uploadedFiles: state.uploadedFiles.filter(f => f.id !== fileId),
-      };
-    });
+    try {
+      await apiFetch(`${API_BASE_URL}/api/uploaded-files/${encodeURIComponent(fileId)}`, { method: 'DELETE' });
+      set(state => ({ records: state.records.filter(r => r.fileId !== fileId), uploadedFiles: state.uploadedFiles.filter(f => f.id !== fileId) }));
+    } catch (error) { console.error('File deletion was not saved:', error); return false; }
+    return true;
   },
   
   updateRecord: async (id, updates) => {
-    // Update local state first for immediate UI feedback
-    set((state) => ({
-      records: state.records.map(r => r.id === id ? { ...r, ...updates } : r)
-    }));
-
     // Sync to backend
     try {
-      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/${id}`;
-      const response = await fetch(apiUrl, {
+      const apiUrl = `${API_BASE_URL}/api/commissions/${id}`;
+      const response = await apiFetch(apiUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
@@ -108,37 +91,41 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       if (!response.ok) {
         console.error('Failed to update record in database:', response.statusText);
       }
+      set(state => ({ records: state.records.map(r => r.id === id ? { ...r, ...updates } : r) }));
     } catch (error) {
       console.error('Error updating record:', error);
+      return false;
     }
+    return true;
   },
   
   deleteRecord: async (id) => {
     // Delete from backend
     try {
-      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/${id}`;
-      await fetch(apiUrl, { method: 'DELETE' });
+      const apiUrl = `${API_BASE_URL}/api/commissions/${id}`;
+      await apiFetch(apiUrl, { method: 'DELETE' });
     } catch (error) {
       console.error('Failed to delete record from backend:', error);
+      return false;
     }
     // Update local state
     set((state) => ({
       records: state.records.filter(r => r.id !== id)
     }));
+    return true;
   },
   
-  toggleActive: (imei) => {
-    set((state) => {
-      const imeiRecords = state.records.filter(r => r.imei === imei);
-      if (imeiRecords.length === 0) return state;
-      
-      const newActiveState = !imeiRecords[0].isActive;
-      return {
-        records: state.records.map(r => 
-          r.imei === imei ? { ...r, isActive: newActiveState } : r
-        )
-      };
-    });
+  toggleActive: async (imei) => {
+    const first = get().records.find(r => r.imei === imei);
+    if (!first) return false;
+    const isActive = !first.isActive;
+    try {
+      await apiFetch(`${API_BASE_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive }),
+      });
+      set(state => ({ records: state.records.map(r => r.imei === imei ? { ...r, isActive } : r) }));
+      return true;
+    } catch (error) { console.error('Status change was not saved:', error); return false; }
   },
   
   dismissAlert: (alertId) => {
@@ -158,6 +145,31 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
   },
   
   updateIMEINotes: async (imei, notes, suspended, deactivated, blacklisted, byodSwap, customerName, customerNumber, customerEmail) => {
+    // Sync to backend
+    try {
+      const apiUrl = `${API_BASE_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
+      const shouldDeactivate = suspended || deactivated || blacklisted || byodSwap;
+
+      const response = await apiFetch(apiUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notes,
+          suspended,
+          deactivated,
+          blacklisted,
+          byodSwap,
+          customerName,
+          customerNumber,
+          customerEmail,
+          isActive: shouldDeactivate ? false : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to sync IMEI notes to backend:', response.statusText);
+        return false;
+      }
     // Update local state first for immediate UI feedback
     set((state) => {
       const newNotes = new Map(state.imeiNotes);
@@ -198,34 +210,9 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       return { imeiNotes: newNotes };
     });
 
-    // Sync to backend
-    try {
-      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
-      const shouldDeactivate = suspended || deactivated || blacklisted || byodSwap;
-      
-      const response = await fetch(apiUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          notes,
-          suspended,
-          deactivated,
-          blacklisted,
-          byodSwap,
-          customerName,
-          customerNumber,
-          customerEmail,
-          isActive: shouldDeactivate ? false : undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        console.error('Failed to sync IMEI notes to backend:', response.statusText);
-        return;
-      }
       // Fetch latest notes from backend and update store
-      const fetchNotesUrl = `${import.meta.env.VITE_API_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
-      const notesRes = await fetch(fetchNotesUrl);
+      const fetchNotesUrl = `${API_BASE_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
+      const notesRes = await apiFetch(fetchNotesUrl);
       if (notesRes.ok) {
         const notesData = await notesRes.json();
         set((state) => {
@@ -247,10 +234,25 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       }
     } catch (error) {
       console.error('Error syncing IMEI notes to backend:', error);
+      return false;
     }
+    return true;
   },
   
   updateWithholdingResolved: async (imei, resolved) => {
+    // Sync to backend
+    try {
+      const apiUrl = `${API_BASE_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
+      const response = await apiFetch(apiUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ withholdingResolved: resolved }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to sync withholding status to backend:', response.statusText);
+        return false;
+      }
     // Update local state
     set((state) => {
       const newNotes = new Map(state.imeiNotes);
@@ -267,22 +269,9 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       return { imeiNotes: newNotes };
     });
 
-    // Sync to backend
-    try {
-      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
-      const response = await fetch(apiUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ withholdingResolved: resolved }),
-      });
-
-      if (!response.ok) {
-        console.error('Failed to sync withholding status to backend:', response.statusText);
-        return;
-      }
       // Fetch latest notes from backend and update store
-      const fetchNotesUrl = `${import.meta.env.VITE_API_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
-      const notesRes = await fetch(fetchNotesUrl);
+      const fetchNotesUrl = `${API_BASE_URL}/api/commissions/imei/${encodeURIComponent(imei)}/notes`;
+      const notesRes = await apiFetch(fetchNotesUrl);
       if (notesRes.ok) {
         const notesData = await notesRes.json();
         set((state) => {
@@ -304,7 +293,9 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       }
     } catch (error) {
       console.error('Error syncing withholding status to backend:', error);
+      return false;
     }
+    return true;
   },
   
   getIMEINotes: (imei) => {
@@ -315,7 +306,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     const records = get().getRecordsByIMEI(imei);
     const activationRecord = records.find(r => r.activationDate) || records[0];
     
-    if (!activationRecord) return;
+    if (!activationRecord) return false;
     
     const newRecord: CommissionRecord = {
       id: `manual-${Date.now()}-${Math.random()}`,
@@ -336,8 +327,8 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
     
     // Save to backend first
     try {
-      const apiUrl = `${import.meta.env.VITE_API_URL}/api/commissions`;
-      const response = await fetch(apiUrl, {
+      const apiUrl = `${API_BASE_URL}/api/commissions`;
+      const response = await apiFetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newRecord),
@@ -345,7 +336,7 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
 
       if (!response.ok) {
         console.error('Failed to save manual payment to database:', response.statusText);
-        return;
+        return false;
       }
 
       const savedRecord = await response.json();
@@ -356,7 +347,9 @@ export const useCommissionStore = create<CommissionState>()(persist((set, get) =
       }));
     } catch (error) {
       console.error('Error saving manual payment:', error);
+      return false;
     }
+    return true;
   },
   
   getMetrics: (filters) => {

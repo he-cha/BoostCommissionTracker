@@ -61,8 +61,8 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
   };
 
   // Helper functions
-  const handleSaveNotes = () => {
-    updateIMEINotes(
+  const handleSaveNotes = async () => {
+    const notesSaved = await updateIMEINotes(
       imei,
       notes,
       suspended,
@@ -73,27 +73,29 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
       customerNumber,
       customerEmail
     );
-    updateWithholdingResolved(imei, withholdingResolved);
+    const statusSaved = notesSaved && await updateWithholdingResolved(imei, withholdingResolved);
+    if (!statusSaved) { toast({title: 'Some changes were not saved', description: 'Please retry and check the saved values.', variant: 'destructive'}); return; }
     toast({
       title: 'Saved successfully',
       description: 'IMEI notes and status have been updated',
     });
   };
 
-  const handleUpdateMonthPayment = (month: number, recordId: string, amount: number, received: boolean, date: string) => {
-    updateRecord(recordId, {
+  const handleUpdateMonthPayment = async (month: number, recordId: string, amount: number, received: boolean, date: string) => {
+    const saved = await updateRecord(recordId, {
       amount,
       paymentReceived: received,
       paymentDate: date,
     });
     
+    if (!saved) { toast({title: 'Payment was not saved', variant: 'destructive'}); return; }
     toast({
       title: 'Payment updated',
       description: `Month ${month} payment has been updated`,
     });
   };
 
-  const handleAddMonthPayment = (month: number) => {
+  const handleAddMonthPayment = async (month: number) => {
     const monthData = monthPayments[month];
     if (!monthData || !monthData.amount) {
       toast({
@@ -114,7 +116,7 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
       return;
     }
     
-    addMonthPayment(
+    const added = await addMonthPayment(
       imei,
       month,
       amount,
@@ -122,6 +124,7 @@ export function IMEIDetailPage({ imei, onBack, onEdit }: IMEIDetailPageProps) {
       monthData.date || new Date().toISOString().split('T')[0]
     );
     
+    if (!added) { toast({title: 'Payment was not added', variant: 'destructive'}); return; }
     // Clear the form
     setMonthPayments(prev => {
       const newState = { ...prev };

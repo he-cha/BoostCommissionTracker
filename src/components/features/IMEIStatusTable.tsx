@@ -18,8 +18,8 @@ export function IMEIStatusTable({ notesList, type, onIMEIClick }: IMEIStatusTabl
     return notesList.filter(n =>
       n.imei.toLowerCase().includes(lower) ||
       (n.notes && n.notes.toLowerCase().includes(lower)) ||
-      (n.suspendedInfo && n.suspendedInfo.toLowerCase().includes(lower)) ||
-      (n.deactivatedInfo && n.deactivatedInfo.toLowerCase().includes(lower))
+      (n.suspended && 'suspended'.includes(lower)) ||
+      (n.deactivated && 'deactivated'.includes(lower))
     );
   }, [notesList, searchTerm]);
 
@@ -68,8 +68,7 @@ export function IMEIStatusTable({ notesList, type, onIMEIClick }: IMEIStatusTabl
                     )}
                     {type === 'status' && (
                       <TableCell>
-                        {n.deactivated && n.deactivatedInfo}
-                        {n.suspended && n.suspendedInfo}
+                        {n.notes || <span className="text-muted-foreground">No notes</span>}
                       </TableCell>
                     )}
                     {type === 'notes' && (
